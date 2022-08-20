@@ -13,7 +13,7 @@ if (( $buildPrivate == 1 )); then fetchDir WebBlockly $shouldFetch; fi;
 cd $scriptDir/..;
 
 cmd="../WebFramework/create-workspace.sh my-workspace MaterialSite WebFramework IotSite";
-if (( buildPrivate == 1 )); then cmd="$cmd WebBlockly"; fi;
+if (( $buildPrivate == 1 )); then cmd="$cmd WebBlockly"; fi;
 echo $cmd
 $cmd; if [ $? -ne 0 ]; then echo `pwd`; echo $cmd; exit 1; fi;
 echo `pwd`;
