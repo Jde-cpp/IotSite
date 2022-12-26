@@ -12,7 +12,7 @@ export * from './lib/jde-iot.module';
 // export * from './lib/shared/watch-table/watch-table';
 
 
-// export {TwsService, IBar} from './lib/services/tws.service';
+export {IotService} from './lib/services/iot.service';
 // export * from './lib/services/tws.auth.service'
 // export {BlocklyService} from './lib/services/blockly.service';
 
