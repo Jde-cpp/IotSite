@@ -15,7 +15,8 @@ const routes: Routes =
 		data: { name: "Settings" },
 		children :
 		[
-			{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
+			{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } },
+			//{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
 			//{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
 			//{ path: 'logs', component: LogsComponent, data: { name: "Logs", summary: "View Application Logs" } },
 			{ path: 'accounts/:id', component: GraphQLDetailComponent },
@@ -26,7 +27,7 @@ const routes: Routes =
 			{ path: 'roles', component: GraphQLComponent, data: { name: "Roles", summary: "View/Modify Roles" } },
 			{ path: 'groups/:id', component: GraphQLDetailComponent },
 			{ path: 'groups', component: GraphQLComponent, data: { name: "Groups", summary: "View/Modify Groups" } },
-			{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }
+			//{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }
 		]
 	}
 ];
