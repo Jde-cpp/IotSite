@@ -5,6 +5,7 @@ buildPrivate=${3:-0};
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd $scriptDir/../../..;
 JDE_BASH=`pwd`;
+if ! source Framework/scripts/common-error.sh; then exit 1; fi;
 source Framework/common.sh;
 cd web;
 fetchDir WebFramework $shouldFetch;
@@ -27,3 +28,16 @@ echo "not ios_saf 15.2-15.3" >> .browserslistrc;
 echo "not safari 15.2-15.3" >> .browserslistrc;  #todo remove at some point.
 echo add not safari done
 ng build --output-hashing=none --source-map=true;
+
+cd src;
+sitePath=`realpath $scriptDir/../site`;
+addHard styles.scss $sitePath;
+addHard index.html $sitePath;
+addHard favicon.ico $sitePath;
+cd app;
+addHard app_routing_module.ts $sitePath/app;
+addHard app.component.html $sitePath/app;
+addHard app.component.scss $sitePath/app;
+addHard app.component.ts $sitePath/app;
+addHard app.module.ts $sitePath/app;
+

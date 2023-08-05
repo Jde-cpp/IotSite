@@ -29,9 +29,9 @@ import { AppComponent } from './app.component';
 // import {MatToolbarModule} from '@angular/material/toolbar';
 
 // import {SeverityPickerComponent} from 'jde-framework'
-// import {NavBarModule} from 'jde-material-site';
+import {NavBarModule} from 'jde-material';
 // import {ThemePickerModule} from 'jde-material-site';
-import {StyleManager} from 'jde-material-site';
+import {StyleManager} from 'jde-material';
 
 // import {TwsAuthService, TwsService} from 'jde-tws';
 
@@ -63,11 +63,11 @@ import {StyleManager} from 'jde-material-site';
 // import {BlocklyViewerComponent} from 'jde-blockly';
 // import {BlocklyCategoryList} from 'jde-blockly';
 // import {BlocklySidenav} from 'jde-blockly'
-// import {LocalStorageProfile} from 'jde-framework'
-// import {DefaultErrorService } from 'jde-framework'
+import {LocalStorageProfile} from 'jde-framework'
+import {DefaultErrorService } from 'jde-framework'
 
-// import {CanActivateComponentSidenav} from 'jde-material-site';
-// import {ThemeStorage} from 'jde-material-site';
+import {CanActivateComponentSidenav} from 'jde-material';
+import {ThemeStorage} from 'jde-material';
 // import { ComponentCategoryList } from 'jde-material-site';
 // import { ComponentSidenav } from 'projects/jde-material-site/src/lib/pages/component-sidenav/component-sidenav';
 
@@ -121,15 +121,15 @@ const routes: Routes =
   	imports: [
 		BrowserModule, RouterModule.forRoot( routes, {enableTracing: false} ), BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
 	//  MatAutocompleteModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatMenuModule, MatIconModule, MatInputModule, MatNativeDateModule, MatExpansionModule, MatRadioModule, MatCardModule, MatCheckboxModule, MatChipsModule, MatToolbarModule, MatPaginatorModule, MatDatepickerModule, MatSelectModule, MatSnackBarModule, MatSortModule, MatTableModule, MatTabsModule,
-	//  NavBarModule, ThemePickerModule
+	  NavBarModule//, ThemePickerModule
   ],
   /*entryComponents: [TransactDialog, RollDialog, OptionEntryDialog, UserEntryDialog, SelectDialog],*/
   providers: [
 		{provide: 'IProfile', useClass: LocalStorageProfile},
 		{provide: 'IErrorService', useClass: DefaultErrorService},
-		//{provide: 'IAuth', useClass: TwsAuthService},
+		{provide: 'IAuth', useClass: TwsAuthService},
 		//{provide: 'IGraphQL', useClass: TwsService},
-		CanActivateComponentSidenav, StyleManager, ThemeStorage, DecimalPipe
+		//CanActivateComponentSidenav, StyleManager, ThemeStorage, DecimalPipe
 	],
 	bootstrap: [AppComponent]
 })
