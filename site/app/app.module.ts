@@ -1,4 +1,5 @@
 import { DecimalPipe } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import {Routes, RouterModule} from '@angular/router';
@@ -86,7 +87,7 @@ import { AppRoutingModule } from './app_routing_module';
 		// UserComponent, UserEntryDialog, SelectDialog, LogsComponent, GraphQLComponent, GraphQLDetailComponent, GraphQLProperties, GraphQLTable, GraphQLLinkComponent, LinkSelectComponent, DateRangeComponent,
 	],
   	imports: [
-		BrowserModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
+		BrowserModule, HttpClientModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
 		MatDialogModule,MatSnackBarModule,
 	//  MatAutocompleteModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatMenuModule, MatIconModule, MatInputModule, MatNativeDateModule, MatExpansionModule, MatRadioModule, MatCardModule, MatCheckboxModule, MatChipsModule, MatToolbarModule, MatPaginatorModule, MatDatepickerModule, MatSelectModule, MatSortModule, MatTableModule, MatTabsModule,
 

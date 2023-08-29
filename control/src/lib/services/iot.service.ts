@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@angular/core';
 import { IGraphQL, ProtoService } from 'jde-framework'; //Mutation, DateUtilities, IQueryResult
 //import { IAu th } from 'jde-material';
 import { IErrorService, ProtoUtilities } from 'jde-framework';
+import { environment } from '../../../environments/environment';
 
 interface IStringRequest<T>{ id:number; type:T; value:string; }
 interface IStringResult{ id:number; value:string; }
@@ -17,7 +18,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 {
 	constructor( /*@Inject('IAu th') public authorizationService:IAu th,*/ @Inject('IErrorService') private cnsl: IErrorService )
 	{
-		super( Requests.Transmission );
+		super( Requests.Transmission, environment.iotServerUrl );
 	}
 	encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
 	handleConnectionError(){};

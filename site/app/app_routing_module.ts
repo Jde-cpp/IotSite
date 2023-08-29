@@ -5,7 +5,8 @@ import { ComponentCategoryList } from 'jde-material';
 import { ComponentSidenav } from 'jde-material';
 
 import{ GraphQLComponent } from 'jde-framework';
-import{ GraphQLDetailComponent } from 'jde-framework';
+import{ AppService, GraphQLDetailComponent } from 'jde-framework';
+
 
 const routes: Routes =
 [
@@ -19,14 +20,12 @@ const routes: Routes =
 			//{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
 			//{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
 			//{ path: 'logs', component: LogsComponent, data: { name: "Logs", summary: "View Application Logs" } },
-			{ path: 'accounts/:id', component: GraphQLDetailComponent },
-			{ path: 'accounts', component: GraphQLComponent, data: { name: "Accounts", summary: "View/Modify IB Accounts", display:"description", showAdd: false } },
-			{ path: 'users/:id', component: GraphQLDetailComponent },
-			{ path: 'users', component: GraphQLComponent, data: { name: "Users", summary: "View/Modify Users" } },
-			{ path: 'roles/:id', component: GraphQLDetailComponent },
-			{ path: 'roles', component: GraphQLComponent, data: { name: "Roles", summary: "View/Modify Roles" } },
-			{ path: 'groups/:id', component: GraphQLDetailComponent },
-			{ path: 'groups', component: GraphQLComponent, data: { name: "Groups", summary: "View/Modify Groups" } },
+			{ path: 'users/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
+			{ path: 'users', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Users", summary: "View/Modify Users" } },
+			{ path: 'roles/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
+			{ path: 'roles', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Roles", summary: "View/Modify Roles" } },
+			{ path: 'groups/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
+			{ path: 'groups', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Groups", summary: "View/Modify Groups" } },
 			//{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }
 		]
 	}

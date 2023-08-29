@@ -14,9 +14,10 @@ echo 'jde-framework-proto done';
 cd node_modules/jde-cpp;
 
 declare -A iotFiles;
-if [ ! -f IotFromServer.d.ts ] || [ $clean == 1 ]; then iotFiles[IotfromServer]=iot_from_server_root; fi;
+if [ ! -f IotFromServer.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromServer]=iot_from_server_root; fi;
 if [ ! -f IotFromClient.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromClient]=iot_from_client_root; fi;
 echo 'call create';
+echo $jdeBash;
 create $jdeBash/IotWebsocket/source/types/proto iotFiles;
 
 # declare -A blockly;

@@ -69,7 +69,7 @@ import { NgModule } from '@angular/core';
 		// ComponentHeaderModule,
 		// DateRangeModule, LinkSelectModule, PaginatorModule
 	],
-	entryComponents: [],
+	//entryComponents: [],
 	exports: [
 	//	OrderComponent, PortfolioComponent, TradeComponent, WatchComponent, SnapshotComponent
 	],
