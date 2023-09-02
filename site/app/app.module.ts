@@ -8,21 +8,21 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {MatDialogModule} from '@angular/material/dialog';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
 
-// import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
 // import {MatButtonModule} from '@angular/material/button';
 // import {MatCardModule} from '@angular/material/card';
 // import {MatCheckboxModule} from '@angular/material/checkbox';
 // import {MatChipsModule} from '@angular/material/chips';
 // import {MatNativeDateModule} from '@angular/material/core';
 // import {MatExpansionModule} from '@angular/material/expansion';
-// import {MatFormFieldModule} from '@angular/material/form-field';
+import {MatFormFieldModule} from '@angular/material/form-field';
 // import { MatIconModule } from '@angular/material/icon';
-// import { MatInputModule } from '@angular/material/input';
+import { MatInputModule } from '@angular/material/input';
 // import { MatMenuModule } from '@angular/material/menu';
 // import {MatRadioModule} from '@angular/material/radio';
 // import {MatDatepickerModule} from '@angular/material/datepicker';
 // import {MatPaginatorModule} from '@angular/material/paginator';
-// import {MatSelectModule} from '@angular/material/select';
+ import {MatSelectModule} from '@angular/material/select';
 // import {MatSortModule} from '@angular/material/sort';
 // import {MatTabsModule} from '@angular/material/tabs';
 // import {MatTableModule} from '@angular/material/table';
@@ -88,8 +88,8 @@ import { AppRoutingModule } from './app_routing_module';
 	],
   	imports: [
 		BrowserModule, HttpClientModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
-		MatDialogModule,MatSnackBarModule,
-	//  MatAutocompleteModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatMenuModule, MatIconModule, MatInputModule, MatNativeDateModule, MatExpansionModule, MatRadioModule, MatCardModule, MatCheckboxModule, MatChipsModule, MatToolbarModule, MatPaginatorModule, MatDatepickerModule, MatSelectModule, MatSortModule, MatTableModule, MatTabsModule,
+		MatDialogModule, MatSnackBarModule, MatAutocompleteModule, MatSelectModule,// MatInputModule,//MatFormFieldModule,
+	//  , MatButtonModule, MatDialogModule, , MatMenuModule, MatIconModule, MatNativeDateModule, MatExpansionModule, MatRadioModule, MatCardModule, MatCheckboxModule, MatChipsModule, MatToolbarModule, MatPaginatorModule, MatDatepickerModule, MatSelectModule, MatSortModule, MatTableModule, MatTabsModule,
 
 		AppRoutingModule,NavBarModule//, ThemePickerModule
   ],
