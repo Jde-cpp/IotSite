@@ -29,7 +29,7 @@ import { MatInputModule } from '@angular/material/input';
 // import {MatToolbarModule} from '@angular/material/toolbar';
 
 // import {SeverityPickerComponent} from 'jde-framework'
-import {NavBarModule, EnvironmentService} from 'jde-material';
+import {NavBar, EnvironmentService} from 'jde-material';
 
 // import {ThemePickerModule} from 'jde-material-site';
 //import {StyleManager} from 'jde-material';
@@ -91,7 +91,7 @@ import { AppRoutingModule } from './app_routing_module';
 		MatDialogModule, MatSnackBarModule, MatAutocompleteModule, MatSelectModule,// MatInputModule,//MatFormFieldModule,
 	//  , MatButtonModule, MatDialogModule, , MatMenuModule, MatIconModule, MatNativeDateModule, MatExpansionModule, MatRadioModule, MatCardModule, MatCheckboxModule, MatChipsModule, MatToolbarModule, MatPaginatorModule, MatDatepickerModule, MatSelectModule, MatSortModule, MatTableModule, MatTabsModule,
 
-		AppRoutingModule,NavBarModule//, ThemePickerModule
+		AppRoutingModule,NavBar//, ThemePickerModule
   ],
   /*entryComponents: [TransactDialog, RollDialog, OptionEntryDialog, UserEntryDialog, SelectDialog],*/
   providers: [
