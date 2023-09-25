@@ -6,6 +6,7 @@ import { ComponentSidenav } from 'jde-material';
 
 import{ GraphQLComponent } from 'jde-framework';
 import{ AppService, GraphQLDetailComponent } from 'jde-framework';
+import{ IotService } from 'jde-iot';
 
 
 const routes: Routes =
@@ -26,6 +27,7 @@ const routes: Routes =
 			{ path: 'roles', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Roles", summary: "View/Modify Roles" } },
 			{ path: 'groups/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
 			{ path: 'groups', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Groups", summary: "View/Modify Groups" } },
+			{ path: 'opcServers', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: IotService}], data: { name: "OpcServers", summary: "View/Modify OPC Servers" } }
 			//{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }
 		]
 	}

@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@angular/core';
 import { IGraphQL, ProtoService, AppService } from 'jde-framework'; //Mutation, DateUtilities, IQueryResult
-//import { IAu th } from 'jde-material';
+import { HttpClient } from '@angular/common/http';
 import { IErrorService, ProtoUtilities } from 'jde-framework';
 //import { environment } from '../../../environments/environment';
 
@@ -11,14 +11,19 @@ interface IError{ requestId:number; message: string; }
 
 import * as IotRequests from 'jde-cpp/IotFromClient'; import Requests = IotRequests.Jde.Iot.FromClient;
 import * as IotResults from 'jde-cpp/IotFromServer'; import Results = IotResults.Jde.Iot.FromServer;
+import { HttpErrorResponse } from '@angular/common/http';
 
 
 @Injectable( {providedIn: 'root'} )
 export class IotService extends ProtoService<Requests.ITransmission,Results.IMessageUnion> implements IGraphQL
 {
-	constructor( @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl: IErrorService )
+	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl: IErrorService )
 	{
-		super( Requests.Transmission, appService.iotServerUrl() );
+		super( Requests.Transmission, http );
+		appService.iotInstances().then(
+			(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances},
+			(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
+		);
 	}
 	encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
 	handleConnectionError(){};
