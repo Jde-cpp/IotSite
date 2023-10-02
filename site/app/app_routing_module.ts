@@ -1,16 +1,25 @@
 import { NgModule } from '@angular/core';
-import {Routes, RouterModule} from '@angular/router';
+import {Routes, ROUTES, RouterModule} from '@angular/router';
 
 import { ComponentCategoryList } from 'jde-material';
 import { ComponentSidenav } from 'jde-material';
 
 import{ GraphQLComponent } from 'jde-framework';
 import{ AppService, GraphQLDetailComponent } from 'jde-framework';
-import{ IotService } from 'jde-iot';
-
+import{ IotService, OpcRouteService, OpcServer } from 'jde-iot';
 
 const routes: Routes =
 [
+	{
+		path: 'opcServers',
+		component: ComponentSidenav,
+		data: { name: "OPC Servers" },
+		children :
+		[
+			{ path: '', component: ComponentCategoryList, data: { name: "OPC Servers", summary: "OPC Servers" }, providers: [ {provide: 'IRouteService', useClass: OpcRouteService}] },
+			{ path: ':id', component: OpcServer },
+		]
+	},
 	{
 		path: 'settings',
 		component: ComponentSidenav,
@@ -27,12 +36,22 @@ const routes: Routes =
 			{ path: 'roles', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Roles", summary: "View/Modify Roles" } },
 			{ path: 'groups/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
 			{ path: 'groups', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Groups", summary: "View/Modify Groups" } },
-			{ path: 'opcServers', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: IotService}], data: { name: "OpcServers", summary: "View/Modify OPC Servers" } }
+			{ path: 'opcServers', component: GraphQLComponent, data: { name: "OpcServers", summary: "View/Modify OPC Servers" } },
+			{ path: 'opcServers/:id', component: GraphQLDetailComponent },
 			//{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }
 		]
 	}
 ];
+function setRoutes( iot:IotService ){
+	return routes;
+}
 
-@NgModule( { imports: [RouterModule.forRoot(routes)], exports: [RouterModule]} )
+@NgModule( { imports: [RouterModule.forRoot([])], exports: [RouterModule],
+	providers: [{
+      provide: ROUTES,
+      useFactory: setRoutes,
+			multi: true
+	}]})
  export class AppRoutingModule {
  }
+

@@ -1,6 +1,8 @@
 //import { DecimalPipe } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
+import {COMMA, SPACE} from '@angular/cdk/keycodes';
+import {MAT_CHIPS_DEFAULT_OPTIONS } from '@angular/material/chips';
 //import { BrowserModule } from '@angular/platform-browser';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -93,12 +95,14 @@ import { AppRoutingModule } from './app_routing_module';
   ],
   /*entryComponents: [TransactDialog, RollDialog, OptionEntryDialog, UserEntryDialog, SelectDialog],*/
   providers: [
+		{provide: MAT_CHIPS_DEFAULT_OPTIONS,useValue: {separatorKeyCodes: [COMMA, SPACE]} },
 		{provide: 'IProfile', useClass: LocalStorageProfile},
 		{provide: 'IErrorService', useClass: DefaultErrorService},
 		{provide: 'IAuth', useClass: AuthService},
 		{provide: 'IEnvironment', useClass: EnvironmentService},
 		{provide: 'IGraphQL', useClass: IotService},
 		{provide: 'AppService', useClass: AppService},
+		{provide: 'IotService', useClass: IotService},
 		//CanActivateComponentSidenav, StyleManager, ThemeStorage, DecimalPipe
 	],
 	bootstrap: [AppComponent]

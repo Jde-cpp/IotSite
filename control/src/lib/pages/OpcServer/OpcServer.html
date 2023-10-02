@@ -1,0 +1,22 @@
+<ng-container *ngIf="viewPromise | async">
+	<!-- <div>references.length={{references.length}}</div>
+	<div>r0={{references[0].displayName.text}}</div>
+	<div *ngFor="let r of references">{{r.displayName.text}}</div> -->
+	<mat-table [dataSource]="references" class="mat-elevation-z8">
+		<!-- matSort (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction" -->
+		<ng-container matColumnDef="name">
+			<mat-header-cell mat-sort-header [style.flex]="'0 0 65px'" *matHeaderCellDef> Name </mat-header-cell>
+			<mat-cell style="text-align: left" [style.flex]="'0 0 65px'" title="{{ r.displayName.locale ? '' : r.displayName.text }}" mat-cell *matCellDef="let r"> {{r.displayName.locale ?? r.displayName.text}} </mat-cell>
+		</ng-container>
+		<ng-container matColumnDef="class">
+			<mat-header-cell mat-sort-header *matHeaderCellDef> Class </mat-header-cell>
+			<mat-cell mat-cell *matCellDef="let r">{{toObject[r.nodeClass]}}</mat-cell>
+		</ng-container>
+		<ng-container matColumnDef="value">
+			<mat-header-cell mat-sort-header *matHeaderCellDef> Value </mat-header-cell>
+			<mat-cell mat-cell *matCellDef="let r">{{r.node.value}}</mat-cell>
+		</ng-container>
+		<mat-header-row *matHeaderRowDef="['name', 'class', 'value']"></mat-header-row>
+		<mat-row *matRowDef="let row; columns: ['name', 'class', 'value']"></mat-row>
+	</mat-table>
+</ng-container>

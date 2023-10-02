@@ -60,6 +60,10 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 				console.error( e );
 		}
 	}
+	async browseObjectsFolder():Promise<any>{
+		const y = await super.get("BrowseObjectsFolder");
+		return y;
+	}
 
 	//get queryId(){ return Requests.ERequest.Query; }
 }
