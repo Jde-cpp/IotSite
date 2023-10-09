@@ -3,6 +3,7 @@ import { IGraphQL, ProtoService, AppService } from 'jde-framework'; //Mutation, 
 import { HttpClient } from '@angular/common/http';
 import { IErrorService, ProtoUtilities } from 'jde-framework';
 //import { environment } from '../../../environments/environment';
+import * as types from '../types/types';
 
 interface IStringRequest<T>{ id:number; type:T; value:string; }
 interface IStringResult{ id:number; value:string; }
@@ -60,8 +61,17 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 				console.error( e );
 		}
 	}
-	async browseObjectsFolder():Promise<any>{
-		const y = await super.get("BrowseObjectsFolder");
+	toParams( obj:any )
+	{
+		let params="";
+		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
+		return params;
+	}
+	async browseObjectsFolder( opcId:string, node:types.ExtendedNode ):Promise<types.Reference[]>{
+		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${this.toParams(node.toJson())}`);
+		var y = [];
+		for( const ref of json["references"] )
+			y.push( new types.Reference(ref) );
 		return y;
 	}
 

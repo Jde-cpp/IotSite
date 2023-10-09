@@ -24,6 +24,12 @@ $theme: mat.define-light-theme((
 {
 	width: 100%;
 }
+a {
+	color: inherit;
+}
+a:visited {
+	color: magenta;
+}
 // .negativeValue
 // {
 // 	background: rgba(255, 0, 0, 0.5);
