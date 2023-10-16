@@ -67,8 +67,8 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
 		return params;
 	}
-	async browseObjectsFolder( opcId:string, node:types.ExtendedNode ):Promise<types.Reference[]>{
-		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${this.toParams(node.toJson())}`);
+	async browseObjectsFolder( opcId:string, node:types.ExtendedNode, snapshot:boolean ):Promise<types.Reference[]>{
+		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${this.toParams(node.toJson())}&snapshot=${snapshot}`);
 		var y = [];
 		for( const ref of json["references"] )
 			y.push( new types.Reference(ref) );

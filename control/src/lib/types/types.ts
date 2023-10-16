@@ -1,4 +1,5 @@
 import { environment } from '../../../environments/environment';
+import Long from "long";
 
 export class Guid{
 	constructor( x:string ){
@@ -14,25 +15,27 @@ export class Guid{
 export function toBinary( x:string ):Uint8Array{  return Uint8Array.from( atob(x), c => c.charCodeAt(0) ); }
 export type NodeId = number | string | Guid | Uint8Array;
 export type Namespace = string | number;
+export type Timestamp = {seconds:number, nanos:number};
+export type Value = string | number | boolean | Long | Guid | Uint8Array | Timestamp | ExtendedNode | Node | Value[];
 
 export interface INode{
 	ns:Namespace;
-	nodeId:NodeId;
+	id:NodeId;
 }
 export type NodeJson = {ns?:number, nsu?:string,s?:string,i?:number,g?:string,b?:string};
 export class Node implements INode{
 	constructor( json:NodeJson ){
 		this.ns =  json.ns ? +json.ns : undefined;
 		if( json.i!==undefined )
-			this.nodeId = +json.i;
+			this.id = +json.i;
 		else if( json.s!==undefined )
-			this.nodeId = json.s;
+			this.id = json.s;
 		else if( json.g!==undefined )
-			this.nodeId = new Guid( json.g );
+			this.id = new Guid( json.g );
 		else if( json.b!==undefined )
-			this.nodeId = toBinary( json.b );
+			this.id = toBinary( json.b );
 		else
-			this.nodeId = environment.defaultNode;
+			this.id = environment.defaultNode;
 	}
 	toJson():NodeJson{
 		let json:NodeJson = {};
@@ -41,20 +44,20 @@ export class Node implements INode{
 		else
 			json.nsu = this.ns;
 
-		let idValue = this.nodeId;
-		if( typeof this.nodeId === "number" )
-			json.i = this.nodeId;
-		else if( typeof this.nodeId === "string" )
-			json.s = this.nodeId;
-		else if( this.nodeId instanceof Guid )
-			json.g = this.nodeId.toString();
-		else if( this.nodeId instanceof Uint8Array )
-			json.b = btoa( this.nodeId.reduce((acc, current) => acc + String.fromCharCode(current), "") );
+		let idValue = this.id;
+		if( typeof this.id === "number" )
+			json.i = this.id;
+		else if( typeof this.id === "string" )
+			json.s = this.id;
+		else if( this.id instanceof Guid )
+			json.g = this.id.toString();
+		else if( this.id instanceof Uint8Array )
+			json.b = btoa( this.id.reduce((acc, current) => acc + String.fromCharCode(current), "") );
 
 		return json;
 	}
 	ns:number;
-	nodeId:NodeId;
+	id:NodeId;
 }
 
 export interface IExtendedNode extends INode{
@@ -109,7 +112,7 @@ export interface IReference{
 	typeDefinition?:IExtendedNode;
 }
 export class Reference{
-	constructor( json:{browseName:IBrowseName, displayName:ILocalizedText, isForward:boolean, node?:ExtendedNodeJson, nodeClass?:number, referenceType?:NodeJson, typeDefinition?:ExtendedNodeJson} ){
+	constructor( json:{browseName:IBrowseName, displayName:ILocalizedText, isForward:boolean, node?:ExtendedNodeJson, nodeClass?:number, referenceType?:NodeJson, typeDefinition?:ExtendedNodeJson, value:any } ){
 		this.browseName = json.browseName;
 		this.displayName = json.displayName;
 		this.isForward = json.isForward;
@@ -117,12 +120,15 @@ export class Reference{
 		this.nodeClass = <ENodeClass>json.nodeClass;
 		this.referenceType = new Node( json.referenceType );
 		this.typeDefinition = new ExtendedNode( json.typeDefinition );
+		// if( this.referenceType.id==ENodes.ObjectsFolder )
+		// 	this.referenceType.id = environment.defaultNode;
 	}
 	nodeParams():NodeJson{ return this.node.toJson(); }
 	browseName?:IBrowseName;
 	displayName:ILocalizedText;
 	isForward?:boolean;
 	node?:ExtendedNode;
+	value?:Value;
 	nodeClass?:ENodeClass;
 	referenceType?:INode;
 	typeDefinition?:IExtendedNode;
