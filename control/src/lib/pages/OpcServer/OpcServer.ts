@@ -4,7 +4,7 @@ import {MatButtonModule} from '@angular/material/button';
 import { Sort } from '@angular/material/sort';
 import {RouterModule, ActivatedRoute, Router, ParamMap, NavigationEnd} from '@angular/router';
 import { IotService } from '../../services/iot.service';
-import {IProfile,Settings} from 'jde-framework'
+import {IErrorService,IProfile,Settings} from 'jde-framework'
 import * as types from '../../types/types';
 import {  MatTableModule } from '@angular/material/table';
 import { environment } from '../../../../environments/environment';
@@ -19,7 +19,7 @@ import { Observable, filter, firstValueFrom, switchMap } from 'rxjs';
 		imports: [NgFor,NgIf,AsyncPipe, MatTableModule, RouterModule,MatButtonModule]
 })
 export class OpcServer implements OnInit, OnDestroy, OnChanges {
-	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router ){}
+	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private cnsl: IErrorService ){}
 	async ngOnInit() {
 		this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe((e: NavigationEnd) => {
 			this.profile.save();
@@ -44,19 +44,23 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
 		this.profile = new Settings<PageSettings>( PageSettings, `${this.opc}.${this.node.id}`, this.profileService );
 		await this.profile.loadedPromise;
 
-		this.references = await this._iot.browseObjectsFolder( this.opc, this.node, this.showSnapshot );
-		if( !this.viewPromise )
-			this.viewPromise = Promise.resolve( true );
+		try{
+			this.references = await this._iot.browseObjectsFolder( this.opc, this.node, this.showSnapshot );
+			if( !this.viewPromise )
+				this.viewPromise = Promise.resolve( true );
+		}
+		catch( e ){
+			this.cnsl.error( e["error"]["message"] );
+		}
 	}
 
   ngOnDestroy() {
-		debugger;
 		this.profile.save();
     //if (this.routeParamSubscription) {
 //      this.routeParamSubscription.unsubscribe();
   }
 	toObject( x:types.ENodeClass ):string{ return types.ENodeClass[x]; }
-
+	toString( value:types.Value ){ return types.toString(value); }
 	get columns():string[]{ return this.settings.columns; }
 	get ns():number{ return +this.node.ns ?? environment.defaultNS; }
 	node:types.ExtendedNode;
@@ -65,14 +69,19 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
 	references:types.Reference[];
 	get settings(){ return this.profile.value; }
 	get showSnapshot(){ return this.visibleColumns.includes("snapshot");}
-	toggleSnapshot()
+	async toggleSnapshot()
 	{
 		const i = this.visibleColumns.indexOf( "snapshot" );
 		if( i===-1 ){
-			for( const r of this.references ){
-				todo get values.
-			}
 			this.visibleColumns.push( "snapshot" );
+			this.references.forEach( r=>r.value=null );
+			var nodes = this.references.map( r=>r.node );
+			var snapshots = await this._iot.snapshot( this.opc, nodes );
+			for( let [node,value] of snapshots ){
+				var ref = this.references.find( (n)=>n.node.equals(node) );
+				if( ref )
+					ref.value = value;
+			}
 		}
 		else
 			this.visibleColumns.splice( i, 1 );

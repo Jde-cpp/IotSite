@@ -27,7 +27,7 @@
 			</ng-container>
 			<ng-container matColumnDef="snapshot">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Snapshot </mat-header-cell>
-				<mat-cell mat-cell *matCellDef="let r">{{toObject[r.nodeClass]}}</mat-cell>
+				<mat-cell mat-cell *matCellDef="let r">{{toString(r.value)}}</mat-cell>
 			</ng-container>
 			<mat-header-row *matHeaderRowDef=visibleColumns></mat-header-row>
 			<mat-row *matRowDef="let row; columns: visibleColumns"></mat-row>

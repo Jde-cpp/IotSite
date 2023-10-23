@@ -1,5 +1,6 @@
 import { environment } from '../../../environments/environment';
 import Long from "long";
+import {Error} from "./Error";
 
 export class Guid{
 	constructor( x:string ){
@@ -15,8 +16,35 @@ export class Guid{
 export function toBinary( x:string ):Uint8Array{  return Uint8Array.from( atob(x), c => c.charCodeAt(0) ); }
 export type NodeId = number | string | Guid | Uint8Array;
 export type Namespace = string | number;
-export type Timestamp = {seconds:number, nanos:number};
-export type Value = string | number | boolean | Long | Guid | Uint8Array | Timestamp | ExtendedNode | Node | Value[];
+export class Timestamp{seconds:number; nanos:number;}
+export type Value = string | number | boolean | Long | Guid | Uint8Array | Timestamp | ExtendedNode | Node | Error | Value[];
+
+export function toString( value: Value ){
+	if( typeof value === "string" )
+		return value;
+	else if( typeof value === "number" )
+		return value.toString();
+	else if( typeof value === "boolean" )
+		return value.toString();
+	else if( value instanceof Long )
+		return value.toString();
+	else if( value instanceof Guid )
+		return value.toString();
+	else if( value instanceof Uint8Array )
+		return btoa( value.reduce((acc, current) => acc + String.fromCharCode(current), "") );
+	else if( value instanceof Timestamp )
+		return `${value.seconds}.${value.nanos}`;
+	else if( value instanceof ExtendedNode )
+		return value.toJson();
+	else if( value instanceof Node )
+		return value.id.toString();
+	else if( value instanceof Error )
+		return value.toString();
+	else if( Array.isArray(value) )
+		return value.map( x=>this.toString(x) ).join( "," );
+	else
+		return `unknown type ${typeof value}`;
+}
 
 export interface INode{
 	ns:Namespace;
@@ -37,6 +65,7 @@ export class Node implements INode{
 		else
 			this.id = environment.defaultNode;
 	}
+	public equals(obj: Node) : boolean { return this.ns==obj.ns && this.id==obj.id; }
 	toJson():NodeJson{
 		let json:NodeJson = {};
 		if( typeof this.ns === "number" )
@@ -73,6 +102,8 @@ export class ExtendedNode extends Node implements IExtendedNode{
 		if( !super.ns && !this.nsu )
 			this.ns = environment.defaultNS;
 	}
+	public override equals(obj: ExtendedNode) : boolean { return super.equals(obj) && this.serverIndex==obj.serverIndex && this.nsu==obj.nsu; }
+
 	serverIndex:number;
 	nsu:string;
 }
@@ -120,8 +151,16 @@ export class Reference{
 		this.nodeClass = <ENodeClass>json.nodeClass;
 		this.referenceType = new Node( json.referenceType );
 		this.typeDefinition = new ExtendedNode( json.typeDefinition );
+		if( json.value.sc ){
+			this.value = new Error( json.value.sc );
+		}
+		else
+			this.value = json.value;
 		// if( this.referenceType.id==ENodes.ObjectsFolder )
 		// 	this.referenceType.id = environment.defaultNode;
+	}
+	toValue( obj:string ):Value{
+		return obj;
 	}
 	nodeParams():NodeJson{ return this.node.toJson(); }
 	browseName?:IBrowseName;

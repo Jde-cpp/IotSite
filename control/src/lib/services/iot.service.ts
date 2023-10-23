@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { IErrorService, ProtoUtilities } from 'jde-framework';
 //import { environment } from '../../../environments/environment';
 import * as types from '../types/types';
+import {Error} from '../types/Error';
 
 interface IStringRequest<T>{ id:number; type:T; value:string; }
 interface IStringResult{ id:number; value:string; }
@@ -67,13 +68,32 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
 		return params;
 	}
+	async updateErrorCodes()
+	{
+		const scs = Error.emptyMessages();
+		if( scs.length )
+		{
+			const json = await super.get( `ErrorCodes?scs=${scs.join(',')}` );
+			Error.setMessages( json["errorCodes"] );
+		}
+	}
 	async browseObjectsFolder( opcId:string, node:types.ExtendedNode, snapshot:boolean ):Promise<types.Reference[]>{
 		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${this.toParams(node.toJson())}&snapshot=${snapshot}`);
 		var y = [];
 		for( const ref of json["references"] )
 			y.push( new types.Reference(ref) );
+		this.updateErrorCodes();
 		return y;
 	}
-
+	async snapshot( opcId:string, nodes:types.ExtendedNode[] ):Promise<Map<types.ExtendedNode,types.Value>>
+	{
+		const args = encodeURIComponent( JSON.stringify(nodes.map(n=>n.toJson())) );
+		const json = await super.get( `Snapshot?opc=${opcId}&nodes=${args}` );
+		var y = new Map<types.ExtendedNode,types.Value>();
+		for( const snapshot of json["snapshots"] )
+			y.set( new types.ExtendedNode(snapshot.node), snapshot.value );
+		this.updateErrorCodes();
+		return y;
+	}
 	//get queryId(){ return Requests.ERequest.Query; }
 }
