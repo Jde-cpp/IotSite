@@ -3,7 +3,9 @@ import Long from "long";
 import {Error} from "./Error";
 
 export class Guid{
-	constructor( x:string ){
+	constructor( x?:string ){
+		if( !x )
+			return;
 		let trimmed = x.replace( /-/g, '' );
 		this.value = Uint8Array.from( trimmed.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)) );
 	}
@@ -17,7 +19,9 @@ export function toBinary( x:string ):Uint8Array{  return Uint8Array.from( atob(x
 export type NodeId = number | string | Guid | Uint8Array;
 export type Namespace = string | number;
 export class Timestamp{seconds:number; nanos:number;}
-export type Value = string | number | boolean | Long | Guid | Uint8Array | Timestamp | ExtendedNode | Node | Error | Value[];
+export class Duration{seconds:number; nanos:number;}
+export type Value = boolean | Duration | Error | ExpandedNode | Guid | Long | Node | number | string | Timestamp | Uint8Array   | Value[];
+export type OpcId = string;
 
 export function toString( value: Value ){
 	if( typeof value === "string" )
@@ -34,7 +38,7 @@ export function toString( value: Value ){
 		return btoa( value.reduce((acc, current) => acc + String.fromCharCode(current), "") );
 	else if( value instanceof Timestamp )
 		return `${value.seconds}.${value.nanos}`;
-	else if( value instanceof ExtendedNode )
+	else if( value instanceof ExpandedNode )
 		return value.toJson();
 	else if( value instanceof Node )
 		return value.id.toString();
@@ -65,13 +69,13 @@ export class Node implements INode{
 		else
 			this.id = environment.defaultNode;
 	}
-	public equals(obj: Node) : boolean { return this.ns==obj.ns && this.id==obj.id; }
+	public equals( obj: Node ):boolean{ return (this.ns ?? 0)==(obj.ns ?? 0) && this.id==obj.id; }
 	toJson():NodeJson{
 		let json:NodeJson = {};
-		if( typeof this.ns === "number" )
-			json.ns = this.ns;
-		else
+		if( typeof this.ns === "string" )
 			json.nsu = this.ns;
+		else if( typeof this.ns === "number" && this.ns )
+			json.ns = this.ns;
 
 		let idValue = this.id;
 		if( typeof this.id === "number" )
@@ -89,23 +93,34 @@ export class Node implements INode{
 	id:NodeId;
 }
 
-export interface IExtendedNode extends INode{
+export interface IExpandedNode extends INode{
 	serverIndex:number;
 	nsu:string;
 }
-export type ExtendedNodeJson = {nsu?:string,serverIndex?:number} & NodeJson;
-export class ExtendedNode extends Node implements IExtendedNode{
-	constructor( json: ExtendedNodeJson ){
+export type ExpandedNodeJson = {nsu?:string,serverIndex?:number} & NodeJson;
+export type NodeKey = Symbol;
+export class ExpandedNode extends Node implements IExpandedNode{
+	constructor( json: ExpandedNodeJson ){
 		super(json);
 		this.serverIndex = json.serverIndex;
 		this.nsu = json.nsu;
-		if( !super.ns && !this.nsu )
+		if( !this.ns && !this.nsu && environment.defaultNS )
 			this.ns = environment.defaultNS;
 	}
-	public override equals(obj: ExtendedNode) : boolean { return super.equals(obj) && this.serverIndex==obj.serverIndex && this.nsu==obj.nsu; }
+	public override equals(obj: ExpandedNode) : boolean { return super.equals(obj) && (this.serverIndex ?? 0)==(obj.serverIndex ?? 0) && (this.nsu ?? 0)==(obj.nsu ?? 0); }
 
+	get key():NodeKey{
+		if( !this.#key ){
+			let j = this.toJson();
+			if( this.serverIndex )
+				j["serverIndex"] = this.serverIndex;
+			this.#key = Symbol.for( JSON.stringify(j) );
+		}
+		return this.#key;
+  }
 	serverIndex:number;
 	nsu:string;
+	#key:NodeKey;
 }
 
 export interface ILocalizedText{
@@ -129,7 +144,13 @@ export enum ENodeClass{
   DataType = 64,
   nodeClassView = 128,
 }
-
+export enum ETypes{
+	None = 0,
+	Boolean = 1,
+	Double = 11,
+	String = 12,
+	BaseDataType = 24
+}
 export enum ENodes{
 	ObjectsFolder = 85 /* Object */
 }
@@ -137,21 +158,22 @@ export interface IReference{
 	browseName?:IBrowseName;
 	displayName:ILocalizedText;
 	isForward?:boolean;
-	node?:IExtendedNode;
+	node?:IExpandedNode;
 	nodeClass?:ENodeClass;
 	referenceType?:INode;
-	typeDefinition?:IExtendedNode;
+	typeDefinition?:IExpandedNode;
 }
 export class Reference{
-	constructor( json:{browseName:IBrowseName, displayName:ILocalizedText, isForward:boolean, node?:ExtendedNodeJson, nodeClass?:number, referenceType?:NodeJson, typeDefinition?:ExtendedNodeJson, value:any } ){
+	constructor( json:{browseName:IBrowseName, dataType:NodeJson, displayName:ILocalizedText, isForward:boolean, node?:ExpandedNodeJson, nodeClass?:number, referenceType?:NodeJson, typeDefinition?:ExpandedNodeJson, value:any } ){
 		this.browseName = json.browseName;
 		this.displayName = json.displayName;
 		this.isForward = json.isForward;
-		this.node = new ExtendedNode( json.node );
+		this.node = new ExpandedNode( json.node );
 		this.nodeClass = <ENodeClass>json.nodeClass;
 		this.referenceType = new Node( json.referenceType );
-		this.typeDefinition = new ExtendedNode( json.typeDefinition );
-		if( json.value.sc ){
+		this.dataType = json.dataType.i;
+		this.typeDefinition = new ExpandedNode( json.typeDefinition );
+		if( json.value?.sc ){
 			this.value = new Error( json.value.sc );
 		}
 		else
@@ -164,11 +186,12 @@ export class Reference{
 	}
 	nodeParams():NodeJson{ return this.node.toJson(); }
 	browseName?:IBrowseName;
+	dataType?:ETypes;
 	displayName:ILocalizedText;
 	isForward?:boolean;
-	node?:ExtendedNode;
+	node?:ExpandedNode;
 	value?:Value;
 	nodeClass?:ENodeClass;
 	referenceType?:INode;
-	typeDefinition?:IExtendedNode;
+	typeDefinition?:IExpandedNode;
 }

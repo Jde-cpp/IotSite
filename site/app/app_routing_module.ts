@@ -5,7 +5,7 @@ import { ComponentCategoryList } from 'jde-material';
 import { ComponentSidenav } from 'jde-material';
 
 import{ GraphQLComponent } from 'jde-framework';
-import{ AppService, GraphQLDetailComponent } from 'jde-framework';
+import{ Applications, AppService, GraphQLDetailComponent } from 'jde-framework';
 import{ IotService, OpcRouteService, OpcServer } from 'jde-iot';
 
 const routes: Routes =
@@ -29,7 +29,7 @@ const routes: Routes =
 		[
 			{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } },
 			//{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
-			//{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
+			{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
 			//{ path: 'logs', component: LogsComponent, data: { name: "Logs", summary: "View Application Logs" } },
 			{ path: 'users/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
 			{ path: 'users', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Users", summary: "View/Modify Users" } },
