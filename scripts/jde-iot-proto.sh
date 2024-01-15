@@ -6,10 +6,9 @@ pushd `pwd` > /dev/null;
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )";
 if ! source $scriptDir/env.sh; then exit 1; fi;
 cd $scriptDir/..;
-#baseDir=`pwd`;
 
 popd > /dev/null;
-$frameworkDir/jde-framework-proto.sh
+$frameworkDir/scripts/jde-framework-proto.sh
 echo 'jde-framework-proto done';
 cd node_modules/jde-cpp;
 
@@ -17,8 +16,6 @@ declare -A iotFiles;
 if [ ! -f IotCommon.d.ts ] || [ $clean == 1 ]; then iotFiles[IotCommon]=iot_common_root; fi;
 if [ ! -f IotFromServer.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromServer]=iot_from_server_root; fi;
 if [ ! -f IotFromClient.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromClient]=iot_from_client_root; fi;
-echo 'call create';
-echo $jdeBash;
 create $jdeBash/IotWebsocket/source/types/proto iotFiles;
 
 # declare -A blockly;

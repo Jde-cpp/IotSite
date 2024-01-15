@@ -3,17 +3,16 @@ import { IGraphQL, ProtoService, AppService } from 'jde-framework'; //Mutation, 
 import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { IErrorService, ProtoUtilities } from 'jde-framework';
+import { IErrorService } from 'jde-framework';
+import { Jde } from 'jde-framework'; import FromServer = Jde.Web.FromServer;
 import * as types from '../types/types';
-import {Error} from '../types/Error';
+import { Error } from '../types/Error';
 
-import * as FromServer from 'jde-cpp/FromServer'; import CommonResults = FromServer.Jde.Web.FromServer;
-import * as IotCommon from 'jde-cpp/IotCommon'; import Common = IotCommon.Jde.Iot.Proto;
-import * as IotRequests from 'jde-cpp/IotFromClient'; import Requests = IotRequests.Jde.Iot.FromClient;
-import * as IotResults from 'jde-cpp/IotFromServer'; import Results = IotResults.Jde.Iot.FromServer;
+import * as IotCommon from '../proto/IotCommon'; import Common = IotCommon.Jde.Iot.Proto;
+import * as IotRequests from '../proto/IotFromClient'; import Requests = IotRequests.Jde.Iot.FromClient;
+import * as IotResults from '../proto/IotFromServer'; import Results = IotResults.Jde.Iot.FromServer;
 
 interface IError{ requestId:number; message: string; }
-
 type Owner = any;
 
 @Injectable( {providedIn: 'root'} )
@@ -51,9 +50,9 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		}
 		catch( e )
 		{
-			if( typeof(e)==typeof(CommonResults.Exception) )
+			if( typeof(e)==typeof(FromServer.Exception) )
 			{
-				const e2 = <CommonResults.IException>e;
+				const e2 = <FromServer.IException>e;
 				console.error( `(${e2.requestId})${e2.message}` );
 			}
 			else

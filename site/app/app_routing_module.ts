@@ -8,7 +8,7 @@ import{ GraphQLComponent } from 'jde-framework';
 import{ Applications, AppService, GraphQLDetailComponent } from 'jde-framework';
 import{ IotService, OpcRouteService, OpcServer } from 'jde-iot';
 
-const routes: Routes =
+export const routes: Routes =
 [
 	{
 		path: 'opcServers',
