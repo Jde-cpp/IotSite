@@ -11,7 +11,8 @@ import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
  import {MatSelectModule} from '@angular/material/select';
-import {NavBar, EnvironmentService} from 'jde-material';
+import {NavBar} from 'jde-material';
+import {EnvironmentService} from './services/environment.service';
 
  import {AuthService,AppService} from 'jde-framework';
  import {IotService} from 'jde-iot';
@@ -24,10 +25,8 @@ import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app_routing_module';
 
 @NgModule({
-	declarations: [
-		AppComponent
-	],
   	imports: [
+		AppComponent,
 		RouterModule, HttpClientModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
 		MatDialogModule, MatSnackBarModule, MatAutocompleteModule, MatSelectModule,// MatInputModule,//MatFormFieldModule,
 		AppRoutingModule,NavBar

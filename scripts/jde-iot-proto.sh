@@ -10,16 +10,17 @@ cd $scriptDir/..;
 popd > /dev/null;
 $frameworkDir/scripts/jde-framework-proto.sh
 echo 'jde-framework-proto done';
-cd node_modules/jde-cpp;
+cd projects/jde-iot/src/lib;
+moveToDir proto;
+
+declare -A commonFiles;
+if [ ! -f FromServer.d.ts ] || [ $clean == 1 ]; then commonFiles[FromServer]=from_server_root; fi;
+create $jdeBash/Public/src/web/proto commonFiles;
 
 declare -A iotFiles;
 if [ ! -f IotCommon.d.ts ] || [ $clean == 1 ]; then iotFiles[IotCommon]=iot_common_root; fi;
 if [ ! -f IotFromServer.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromServer]=iot_from_server_root; fi;
 if [ ! -f IotFromClient.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromClient]=iot_from_client_root; fi;
 create $jdeBash/IotWebsocket/source/types/proto iotFiles;
-
-# declare -A blockly;
-# if test ! -f blockly.d.ts; then blockly[blockly]=blockly_root; fi;
-# create $blocklyProtoDir blockly;
 
 popd > /dev/null;
