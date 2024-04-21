@@ -142,7 +142,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			this.updateErrorCodes();
 			throw e;
 		}
-		return json["snapshots"][0].value;
+		return types.toValue( json["snapshots"][0].value );
 	}
 
 	onUnsubscriptionResult( result:Results.IUnsubscribeResult ){
@@ -166,7 +166,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 					toDelete.push( node );
 					let e = new Error( y[i].statusCode );
 					console.log( `Subscription failed for '${node}' - ${e}` );
-					subject.error( {node:node,error:e} );
+					//subject.error( {node:node,error:e} );  closes the subscription.
 				}
 		 	}
 		}
@@ -181,15 +181,34 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 	#ownerSubscriptions = new Map<Owner,Subject<SubscriptionResult>>();
 	#subscriptions = new Map<types.OpcId,Map<types.NodeKey, Owner[]>>();
 	getOpcSubscriptions(opcId:types.OpcId):Map<types.NodeKey, Owner[]>{ return this.#subscriptions.has( opcId ) ? this.#subscriptions.get( opcId ) : this.#subscriptions.set( opcId, new Map<types.NodeKey, Owner[]> ).get( opcId ); }
-	subscribe( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ):Observable<SubscriptionResult>{
+	#nodes = new Map<types.NodeKey, types.ExpandedNode>();
+	clearUnusedNodes(){
+		this.#nodes.forEach( (_, key)=>{
+			const keys = [...this.#subscriptions.entries()].filter( ({1:value})=>value.has(key) ).map( ([key])=>key );
+			if( !keys.length )
+				this.#nodes.delete(key);
+		});
+	}
+	addToSubscription( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ){
 		let opcSubscriptions = this.getOpcSubscriptions( opcId );
 		for( const node of nodes ){
-			let owners = opcSubscriptions.has( node.key ) ? opcSubscriptions.get( node.key ) : opcSubscriptions.set( node.key, new Array<Owner>() ).get( node.key );
-			if( !owners.includes(owner) )
-				owners.push( owner );
+			let owners:Owner[];
+			if( opcSubscriptions.has(node.key) ){
+				let owners = opcSubscriptions.get( node.key );
+				if( !owners.includes(owner) )
+					owners.push( owner );
+			}
+			else{
+				opcSubscriptions.set( node.key, [owner] ).get( node.key );
+				this.#nodes.set( node.key, node );
+			} 
 		}
 		let subject = this.#ownerSubscriptions.has( owner ) ? this.#ownerSubscriptions.get( owner ) : this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() ).get( owner );
 		this._subscribe( opcId, nodes, subject );
+	}
+	subscribe( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ):Observable<SubscriptionResult>{
+		this.addToSubscription( opcId, nodes, owner );
+		let subject = this.#ownerSubscriptions.get( owner );
 		return subject.pipe(
 			finalize(() => {//https://stackoverflow.com/questions/62579473/detect-when-a-subject-has-no-more-subscriptions
 				if( !subject.observers.length ) {
@@ -259,25 +278,49 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 	clearOwnerNode( opcSubscriptions:Map<types.NodeKey, Owner[]>,  key:types.NodeKey, owner:Owner ){
 		let owners = opcSubscriptions.get( key );
 		const index = owners.indexOf( owner );
+		let tombStone = false;
 		if( index!=-1 ){
 			owners.splice( index, 1 );
-			if( !owners.length )
+			tombStone = !owners.length
+			if( tombStone )
 				opcSubscriptions.delete( key );
 		}
+		return tombStone;
 	}
-	clearOwner( owner:Owner ){
+	// remove all subscriptions for owner.
+	private clearOwner( owner:Owner ){
 		this.#ownerSubscriptions.delete( owner );
-		for( const opcSubscriptions of this.#subscriptions.values() ){
-			for( const nodeKey of opcSubscriptions.keys() )
-				this.clearOwnerNode( opcSubscriptions, nodeKey, owner );
+		let toDeleteKeys = new Map<types.OpcId,types.NodeKey[]>();
+		for( const [opcId, opcSubscriptions] of this.#subscriptions.entries() ){
+			for( const nodeKey of opcSubscriptions.keys() ){
+				if( this.clearOwnerNode(opcSubscriptions, nodeKey, owner) )
+				toDeleteKeys.has(opcId) ? toDeleteKeys.get(opcId).push(nodeKey) : toDeleteKeys.set( opcId, [nodeKey] );
+			}
 		}
+		let toDeleteNodes = new Map<types.OpcId,types.ExpandedNode[]>();
+		for( const [opcId,keys] of toDeleteKeys ){
+			let nodes = toDeleteNodes.set( opcId, [] ).get( opcId );
+			keys.forEach( key=>nodes.push( this.#nodes.get(key) ) );
+		}
+		if( toDeleteNodes.size ){
+			for( const [opcId, nodes] of toDeleteNodes ){
+				const requestId = this.nextRequestId;
+				var request:Requests.IUnsubscribe = { nodes:IotService.toProto(nodes), opcId:opcId, requestId:requestId };
+				this.sendPromise<Requests.IUnsubscribe,void>( "unsubscribe", request );
+			}
+		}
+		this.clearUnusedNodes();
 	}
+	// Unsuscribe, but keep subscription open.
 	async unsubscribe( opcId:string, nodes:types.ExpandedNode[], owner:Owner ):Promise<void>{
 		let opcSubscriptions = this.#subscriptions.get( opcId ); //if( !opcSubscriptions ){ return console.error(`Could not find opc ${opcId}`);}
-		let toDelete = [];
-		for( const node of nodes )
-			this.clearOwnerNode( opcSubscriptions, node.key, owner );
+		let toDelete = new Array<types.ExpandedNode>();
+		for( const node of nodes ){
+			if( this.clearOwnerNode( opcSubscriptions, node.key, owner ) )
+				toDelete.push( node );
+		}
 
+		this.clearUnusedNodes();
 		if( toDelete.length ){
 			const requestId = this.nextRequestId;
 			var request:Requests.IUnsubscribe = { nodes:IotService.toProto(toDelete), opcId:opcId, requestId:requestId };

@@ -1,4 +1,3 @@
-import { environment } from '../../../environments/environment';
 import Long from "long";
 import {Error} from "./Error";
 
@@ -20,8 +19,17 @@ export type NodeId = number | string | Guid | Uint8Array;
 export type Namespace = string | number;
 export class Timestamp{seconds:number; nanos:number;}
 export class Duration{seconds:number; nanos:number;}
-export type Value = boolean | Duration | Error | ExpandedNode | Guid | Long | Node | number | string | Timestamp | Uint8Array   | Value[];
+export type Value = boolean | Duration | Error | ExpandedNode | Guid | Long | Node | number | string | Timestamp | Uint8Array | Value[];
 export type OpcId = string;
+
+export function toValue( json:any ):Value{
+	let value = json;
+	if( value?.hasOwnProperty('sc') )
+		value = new Error( json.sc );
+	else if( value?.hasOwnProperty('unsigned') )
+		value = new Long( json.low, json.high, json.unsigned );
+	return value;
+}
 
 export function toString( value: Value ){
 	if( typeof value === "string" )
@@ -50,6 +58,10 @@ export function toString( value: Value ){
 		return `unknown type ${typeof value}`;
 }
 
+export enum ENodes{
+	ObjectsFolder = 85 /* Object */
+}
+
 export interface INode{
 	ns:Namespace;
 	id:NodeId;
@@ -67,7 +79,7 @@ export class Node implements INode{
 		else if( json.b!==undefined )
 			this.id = toBinary( json.b );
 		else
-			this.id = environment.defaultNode;
+			this.id = Node.defaultNode;
 	}
 	public equals( obj: Node ):boolean{ return (this.ns ?? 0)==(obj.ns ?? 0) && this.id==obj.id; }
 	toJson():NodeJson{
@@ -91,6 +103,7 @@ export class Node implements INode{
 	}
 	ns:number;
 	id:NodeId;
+	static defaultNode:NodeId = ENodes.ObjectsFolder;//TODO set from environment and document.
 }
 
 export interface IExpandedNode extends INode{
@@ -104,8 +117,8 @@ export class ExpandedNode extends Node implements IExpandedNode{
 		super(json);
 		this.serverIndex = json.serverIndex;
 		this.nsu = json.nsu;
-		if( !this.ns && !this.nsu && environment.defaultNS )
-			this.ns = environment.defaultNS;
+		if( !this.ns && !this.nsu && ExpandedNode.defaultNS )
+			this.ns = ExpandedNode.defaultNS;
 	}
 	public override equals(obj: ExpandedNode) : boolean { return super.equals(obj) && (this.serverIndex ?? 0)==(obj.serverIndex ?? 0) && (this.nsu ?? 0)==(obj.nsu ?? 0); }
 
@@ -121,6 +134,7 @@ export class ExpandedNode extends Node implements IExpandedNode{
 	serverIndex:number;
 	nsu:string;
 	#key:NodeKey;
+	static defaultNS:number = 0;//TODO set from environment and document.
 }
 
 export interface ILocalizedText{
@@ -147,17 +161,24 @@ export enum ENodeClass{
 export enum ETypes{
 	None = 0,
 	Boolean = 1,
+	SByte = 2,
+	Byte = 3,
+	Int16 = 4,
+	UInt16 = 5,
+	Int32 = 6,
+	UInt32 = 7,
+	Int64 = 8,
+	UInt64 = 9,
+	Float = 10,
 	Double = 11,
 	String = 12,
-	BaseDataType = 24
-}
-export enum ENodes{
-	ObjectsFolder = 85 /* Object */
+	BaseDataType = 24,
+	FolderType = 61
 }
 export interface IReference{
 	browseName?:IBrowseName;
 	displayName:ILocalizedText;
-	isForward?:boolean;
+	isForward?:boolean;P
 	node?:IExpandedNode;
 	nodeClass?:ENodeClass;
 	referenceType?:INode;
@@ -171,24 +192,22 @@ export class Reference{
 		this.node = new ExpandedNode( json.node );
 		this.nodeClass = <ENodeClass>json.nodeClass;
 		this.referenceType = new Node( json.referenceType );
-		this.dataType = json.dataType.i;
+		this.dataType = this.node.id==ETypes.FolderType ? ETypes.FolderType : json.dataType.i;
 		this.typeDefinition = new ExpandedNode( json.typeDefinition );
-		if( json.value?.sc ){
-			this.value = new Error( json.value.sc );
-		}
-		else
-			this.value = json.value;
+		this.value = toValue( json.value );
 		// if( this.referenceType.id==ENodes.ObjectsFolder )
 		// 	this.referenceType.id = environment.defaultNode;
-	}
-	toValue( obj:string ):Value{
-		return obj;
 	}
 	nodeParams():NodeJson{ return this.node.toJson(); }
 	browseName?:IBrowseName;
 	dataType?:ETypes;
 	displayName:ILocalizedText;
+	get isArray():boolean{ return Array.isArray(this.value); }
 	isForward?:boolean;
+	get isFolderType(){ return this.dataType==ETypes.FolderType; }
+	get isInteger():boolean{ return [ETypes.SByte, ETypes.Int16, ETypes.Int32, ETypes.Int64].includes(this.dataType); }
+	get isFloating():boolean{ return [ETypes.Float, ETypes.Double].includes(this.dataType); }
+	get isUnsigned():boolean{ return [ETypes.Byte, ETypes.UInt16, ETypes.UInt32, ETypes.UInt64].includes(this.dataType); }
 	node?:ExpandedNode;
 	value?:Value;
 	nodeClass?:ENodeClass;

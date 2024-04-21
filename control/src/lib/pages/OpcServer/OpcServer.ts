@@ -9,9 +9,9 @@ import { IotService, SubscriptionResult } from '../../services/iot.service';
 import {IErrorService,IProfile,Settings} from 'jde-framework'
 import * as types from '../../types/types';
 import {  MatTableModule } from '@angular/material/table';
-import { environment } from '../../../../environments/environment';
 import { Observable, filter, Subscription, switchMap } from 'rxjs';
 import { Error } from '../../types/Error';
+import { IEnvironment } from 'jde-material';
 
 
 @Component({
@@ -22,7 +22,7 @@ import { Error } from '../../types/Error';
 		imports: [NgFor,NgIf,AsyncPipe, MatTableModule, RouterModule,MatButtonModule,MatCheckboxModule]
 })
 export class OpcServer implements OnInit, OnDestroy, OnChanges {
-	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private cnsl: IErrorService ){
+	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IEnvironment') private environment: IEnvironment, @Inject('IErrorService') private cnsl: IErrorService ){
 		this.selection.changed.subscribe( async (r:SelectionChange<types.Reference>) =>{
 			if( r.added.length>0 ){
 				try {
@@ -40,6 +40,8 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
 							complete:()=>{ console.debug( "complete" );}
 						});
 					}
+					else
+						this._iot.addToSubscription( this.opc, nodes, this.Key );
 				} catch (e) {
 					this.cnsl.error( e["error"]["message"] );
 				}
@@ -124,11 +126,11 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
   }
 
 	get columns():string[]{ return this.settings.columns; }
-	get ns():number{ return +this.node.ns ?? environment.defaultNS; }
+	get ns():number{ return +this.node.ns ?? this.environment.get("defaultNS"); }
 	node:types.ExpandedNode;
 	get opc():string{ return this.route.snapshot.paramMap.get('opc'); }
 	profile:Settings<PageSettings>;
-	references:types.Reference[];
+	references:types.Reference[]; 
 	retrievingSnapshot:boolean=false;
 	get settings(){ return this.profile.value; }
 	//set showSnapshot(show:boolean){ if(show!=this.showSnapshot){ if(show)this.visibleColumns.push( "snapshot" ); else this.visibleColumns.splice( this.visibleColumns.indexOf("snapshot"), 1 );} }
