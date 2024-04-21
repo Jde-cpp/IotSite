@@ -22,10 +22,8 @@ import { Error } from '../../types/Error';
 		imports: [NgFor,NgIf,AsyncPipe, MatTableModule, RouterModule,MatButtonModule,MatCheckboxModule]
 })
 export class OpcServer implements OnInit, OnDestroy, OnChanges {
-	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private cnsl: IErrorService )
-	{
-		this.selection.changed.subscribe( async (r:SelectionChange<types.Reference>) =>
-		{
+	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private cnsl: IErrorService ){
+		this.selection.changed.subscribe( async (r:SelectionChange<types.Reference>) =>{
 			if( r.added.length>0 ){
 				try {
 					//let nodes = this.selection.selected.map( r=>r.node );
@@ -96,7 +94,9 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
 				this.viewPromise = Promise.resolve( true );
 		}
 		catch( e ){
-			this.cnsl.error( e["error"]["message"] );
+			this.cnsl.error( e["message"] ? e["message"] : e["error"]["message"] );
+			if( e["stack"] )
+				console.error( e["stack"] );
 		}
 	}
 
