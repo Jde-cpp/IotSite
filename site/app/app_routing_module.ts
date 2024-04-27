@@ -17,6 +17,8 @@ export const routes: Routes =
 		children :
 		[
 			{ path: '', component: ComponentCategoryList, data: { name: "OPC Servers", summary: "OPC Servers" }, providers: [ {provide: 'IRouteService', useClass: OpcRouteService}] },
+			{ path: ':opc', component: OpcServer },
+			{ path: ':opc/:id/:ns', component: OpcServer },
 		]
 	},
 	{

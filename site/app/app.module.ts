@@ -8,19 +8,11 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
- import {MatSelectModule} from '@angular/material/select';
+import {MatSelectModule} from '@angular/material/select';
 import {NavBar} from 'jde-material';
-import {EnvironmentService} from './services/environment.service';
 
- import {AuthService,AppService} from 'jde-framework';
- import {IotService} from 'jde-iot';
-import {LocalStorageProfile} from 'jde-framework'
-import {DefaultErrorService } from 'jde-framework'
 
-import {CanActivateComponentSidenav} from 'jde-material';
-import {ThemeStorage} from 'jde-material';
+import {AuthService} from 'jde-framework';
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app_routing_module';
 
@@ -33,13 +25,7 @@ import { AppRoutingModule } from './app_routing_module';
   ],
   providers: [
 		{provide: MAT_CHIPS_DEFAULT_OPTIONS,useValue: {separatorKeyCodes: [COMMA, SPACE]} },
-		{provide: 'IProfile', useClass: LocalStorageProfile},
-		{provide: 'IErrorService', useClass: DefaultErrorService},
 		{provide: 'IAuth', useClass: AuthService},
-		{provide: 'IEnvironment', useClass: EnvironmentService},
-		{provide: 'IGraphQL', useClass: IotService},
-		{provide: 'AppService', useClass: AppService},
-		{provide: 'IotService', useClass: IotService},
 	],
 	bootstrap: [AppComponent]
 })

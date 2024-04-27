@@ -126,7 +126,7 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
   }
 
 	get columns():string[]{ return this.settings.columns; }
-	get ns():number{ return +this.node.ns ?? this.environment.get("defaultNS"); }
+	get ns():number{ return this.node.ns ? +this.node.ns : this.environment["defaultNS"]; }
 	node:types.ExpandedNode;
 	get opc():string{ return this.route.snapshot.paramMap.get('opc'); }
 	profile:Settings<PageSettings>;

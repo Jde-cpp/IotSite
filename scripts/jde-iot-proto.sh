@@ -21,6 +21,6 @@ declare -A iotFiles;
 if [ ! -f IotCommon.d.ts ] || [ $clean == 1 ]; then iotFiles[IotCommon]=iot_common_root; fi;
 if [ ! -f IotFromServer.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromServer]=iot_from_server_root; fi;
 if [ ! -f IotFromClient.d.ts ] || [ $clean == 1 ]; then iotFiles[IotFromClient]=iot_from_client_root; fi;
-create $jdeBash/IotWebsocket/source/types/proto iotFiles;
+create $jdeBash/Public/jde/iot/types/proto iotFiles;
 
 popd > /dev/null;
