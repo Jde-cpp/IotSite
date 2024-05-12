@@ -105,3 +105,4 @@ dist
 my-workspace*
 site/app/environments/environment.development.ts
 site/environments/environment.development.ts
+.todo

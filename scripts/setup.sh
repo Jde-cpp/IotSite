@@ -23,6 +23,8 @@ ng build --output-hashing=none --source-map=true;
 
 cd src;
 sitePath=`realpath $scriptDir/../site`;
+rm main.ts;
+addHard main.ts $sitePath;
 addHard styles.scss $sitePath;
 addHard index.html $sitePath;
 addHard favicon.ico $sitePath;
