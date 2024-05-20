@@ -16,19 +16,23 @@ interface IError{ requestId:number; message: string; }
 type Owner = any;
 
 @Injectable( {providedIn: 'root'} )
-export class IotService extends ProtoService<Requests.ITransmission,Results.IMessageUnion> implements IGraphQL
-{
-	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl: IErrorService )
-	{
+export class IotService extends ProtoService<Requests.ITransmission,Results.IMessageUnion> implements IGraphQL{
+	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl: IErrorService ){
 		super( Requests.Transmission, http );
 		appService.iotInstances().then(
 			(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances},
 			(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
 		);
 	}
-	encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
-	handleConnectionError(){};
-	processMessage( buffer:protobuf.Buffer ){
+	async login( domain:string, username:string, password:string ){
+		let self = this;
+		if( this.log.restRequests )	console.log( `Login( opc='${domain}', username='${username}' )` );
+		this.setSessionId( await this.post<string>('Login', {opc:domain, user:username, password:password}) );
+		if( this.log.restResults )	console.log( `sessionId='${self.sessionId}'` );
+	}
+	private encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
+	protected handleConnectionError(){};
+	protected processMessage( buffer:protobuf.Buffer ){
 		try{
 			const transmission = Results.Transmission.decode( buffer );
 			for( const message of <Results.MessageUnion[]>transmission.messages ){
@@ -48,10 +52,8 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 					throw `unknown message:  ${JSON.stringify( message[message.Value] )}`;
 			}
 		}
-		catch( e )
-		{
-			if( typeof(e)==typeof(FromServer.Exception) )
-			{
+		catch( e ){
+			if( typeof(e)==typeof(FromServer.Exception) ){
 				const e2 = <FromServer.IException>e;
 				console.error( `(${e2.requestId})${e2.message}` );
 			}
@@ -59,13 +61,12 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 				console.error( e );
 		}
 	}
-	toParams( obj:any )
-	{
+	private static toParams( obj:any ){
 		let params="";
 		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
 		return params;
 	}
-	static toNode( proto:Common.INodeId ):types.Node{
+	private static toNode( proto:Common.INodeId ):types.Node{
 		let node = new types.Node( {ns:proto.namespaceIndex} );
 		if( proto.numeric )
 			node.id = proto.numeric;
@@ -77,7 +78,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			node.id = IotService.toGuid(proto.guid);
 		return node;
 	}
-	static toExpanded( proto:Common.IExpandedNodeId ):types.ExpandedNode{
+	private static toExpanded( proto:Common.IExpandedNodeId ):types.ExpandedNode{
 		const en = new types.ExpandedNode( {nsu:proto.namespaceUri, serverIndex:proto.serverIndex} );
 		const n = IotService.toNode(proto.node);
 		en.id = n.id;
@@ -85,7 +86,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		return en;
 	}
 
-	static toProto( nodes:types.ExpandedNode[] ):Common.IExpandedNodeId[]{
+	private static toProto( nodes:types.ExpandedNode[] ):Common.IExpandedNodeId[]{
 		let protoNodes = [];
 		for( const node of nodes ){
 			let proto = new Common.ExpandedNodeId();
@@ -106,7 +107,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		return protoNodes;
 	}
 
-	async updateErrorCodes()
+	private async updateErrorCodes()
 	{
 		const scs = Error.emptyMessages();
 		if( scs.length )
@@ -115,7 +116,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			Error.setMessages( json["errorCodes"] );
 		}
 	}
-	async browseObjectsFolder( opcId:string, node:types.ExpandedNode, snapshot:boolean ):Promise<types.Reference[]>{
+	private async browseObjectsFolder( opcId:string, node:types.ExpandedNode, snapshot:boolean ):Promise<types.Reference[]>{
 		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${this.toParams(node.toJson())}&snapshot=${snapshot}`);
 		var y = [];
 		for( const ref of json["references"] )
@@ -123,8 +124,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		this.updateErrorCodes();
 		return y;
 	}
-	async snapshot( opcId:string, nodes:types.ExpandedNode[] ):Promise<Map<types.ExpandedNode,types.Value>>
-	{
+	async snapshot( opcId:string, nodes:types.ExpandedNode[] ):Promise<Map<types.ExpandedNode,types.Value>>{
 		const args = encodeURIComponent( JSON.stringify(nodes.map(n=>n.toJson())) );
 		const json = await super.get( `Snapshot?opc=${opcId}&nodes=${args}` );
 		var y = new Map<types.ExpandedNode,types.Value>();
@@ -145,16 +145,16 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		return types.toValue( json["snapshots"][0].value );
 	}
 
-	onUnsubscriptionResult( result:Results.IUnsubscribeResult ){
+	private onUnsubscriptionResult( result:Results.IUnsubscribeResult ){
 		result.failures?.forEach( (node)=>console.log(`unsubscribe failed for:  ${IotService.toExpanded(node).toJson()}`) );
 		this._callbacks.get( result.requestId ).resolve( null );
 	}
 
-	subscriptionAck( ack:Results.ISubscriptionAck ){
+	private subscriptionAck( ack:Results.ISubscriptionAck ){
 		this._callbacks.get( ack.requestId ).resolve( ack.results );
 	}
 
-	async _subscribe( opcId:types.OpcId, nodes:types.ExpandedNode[], subject:Subject<SubscriptionResult> ):Promise<void>{
+	private async _subscribe( opcId:types.OpcId, nodes:types.ExpandedNode[], subject:Subject<SubscriptionResult> ):Promise<void>{
 		const requestId = this.nextRequestId;
 		const request:Requests.ISubscribe = { nodes:IotService.toProto(nodes), opcId:opcId, requestId:requestId };
 		let toDelete = new Array<types.ExpandedNode>();
@@ -182,14 +182,14 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 	#subscriptions = new Map<types.OpcId,Map<types.NodeKey, Owner[]>>();
 	getOpcSubscriptions(opcId:types.OpcId):Map<types.NodeKey, Owner[]>{ return this.#subscriptions.has( opcId ) ? this.#subscriptions.get( opcId ) : this.#subscriptions.set( opcId, new Map<types.NodeKey, Owner[]> ).get( opcId ); }
 	#nodes = new Map<types.NodeKey, types.ExpandedNode>();
-	clearUnusedNodes(){
+	private clearUnusedNodes(){
 		this.#nodes.forEach( (_, key)=>{
 			const keys = [...this.#subscriptions.entries()].filter( ({1:value})=>value.has(key) ).map( ([key])=>key );
 			if( !keys.length )
 				this.#nodes.delete(key);
 		});
 	}
-	addToSubscription( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ){
+	private addToSubscription( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ){
 		let opcSubscriptions = this.getOpcSubscriptions( opcId );
 		for( const node of nodes ){
 			let owners:Owner[];
@@ -217,8 +217,8 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			}));
 	}
 
-	static toGuid( proto:Uint8Array ):types.Guid{ let guid = new types.Guid(); guid.value = proto; return guid; }
-	static toValue( proto:Results.IValue ):types.Value{
+	private static toGuid( proto:Uint8Array ):types.Guid{ let guid = new types.Guid(); guid.value = proto; return guid; }
+	private static toValue( proto:Results.IValue ):types.Value{
 		let v:types.Value;
 		if( proto.boolean )
 			v = proto.boolean;
@@ -262,20 +262,20 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			v = proto.xmlElement;
 		return v;
 	}
-	static toValues( proto:Results.IValue[] ):types.Value{
+	private static toValues( proto:Results.IValue[] ):types.Value{
 		let value = proto.length==1 ? IotService.toValue( proto[0] ) : new Array<types.Value>();
 		if( proto.length>1 )
 			proto.forEach( v => (<types.Value[]>value).push( IotService.toValue(v) ) );
 		return value;
 	}
 
-	nodeValues( nodeValues:Results.INodeValues ):void{
+	private nodeValues( nodeValues:Results.INodeValues ):void{
 		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
 		const node = IotService.toExpanded( nodeValues.node );
 		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner).next({opcId:nodeValues.opcId, node:node, value:IotService.toValues(nodeValues.values)}) );
 	};
 
-	clearOwnerNode( opcSubscriptions:Map<types.NodeKey, Owner[]>,  key:types.NodeKey, owner:Owner ){
+	private clearOwnerNode( opcSubscriptions:Map<types.NodeKey, Owner[]>,  key:types.NodeKey, owner:Owner ){
 		let owners = opcSubscriptions.get( key );
 		const index = owners.indexOf( owner );
 		let tombStone = false;

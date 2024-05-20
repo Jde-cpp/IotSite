@@ -4,8 +4,7 @@ import {Routes, ROUTES, RouterModule} from '@angular/router';
 import { ComponentCategoryList } from 'jde-material';
 import { ComponentSidenav } from 'jde-material';
 
-import{ GraphQLComponent } from 'jde-framework';
-import{ Applications, AppService, GraphQLDetailComponent } from 'jde-framework';
+import{ Applications, AppService, GraphQLComponent, GraphQLDetailComponent, LoginPageComponent } from 'jde-framework';
 import{ IotService, OpcRouteService, OpcServer } from 'jde-iot';
 
 export const routes: Routes =
@@ -28,6 +27,7 @@ export const routes: Routes =
 		children :
 		[
 			{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } },
+			{ path: 'login', component: LoginPageComponent, data: { name: "Login", summary: "Login to Site" } },
 			//{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
 			{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
 			//{ path: 'logs', component: LogsComponent, data: { name: "Logs", summary: "View Application Logs" } },

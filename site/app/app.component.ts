@@ -8,10 +8,9 @@ import {AuthService,AppService} from 'jde-framework';
   imports: [CommonModule, NavBar, RouterOutlet],  
   providers: [
     {provide: 'IAuth', useClass: AuthService},
-    {provide: 'AppService', useClass: AppService}
+    {provide: 'AppService', useClass: AppService},
   ]})
-export class AppComponent
-{
+export class AppComponent{
 	constructor (
 		@Inject(DOCUMENT) private document: Document,
 		private renderer: Renderer2,
