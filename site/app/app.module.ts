@@ -11,7 +11,6 @@ import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatSelectModule} from '@angular/material/select';
 import {NavBar} from 'jde-material';
 
-import {AuthService} from 'jde-framework';
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app_routing_module';
 
@@ -23,9 +22,8 @@ import { AppRoutingModule } from './app_routing_module';
 		AppRoutingModule,NavBar
   ],
   providers: [
-		{provide: MAT_CHIPS_DEFAULT_OPTIONS,useValue: {separatorKeyCodes: [COMMA, SPACE]} },
-		{provide: 'IAuth', useClass: AuthService},
+		{provide: MAT_CHIPS_DEFAULT_OPTIONS,useValue: {separatorKeyCodes: [COMMA, SPACE]} }
 	],
-	bootstrap: [AppComponent]
+//	bootstrap: [AppComponent]
 })
 export class AppModule { }

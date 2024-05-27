@@ -2,7 +2,7 @@ import { provideHttpClient } from "@angular/common/http";
 import { ApplicationConfig } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
-import { AppService, DefaultErrorService,LocalStorageProfile } from 'jde-framework'
+import { AuthService, AppService, DefaultErrorService,LocalStorageProfile } from 'jde-framework'
 import {IotService} from 'jde-iot';
 import {EnvironmentService} from './services/environment.service';
 import { routes } from './app_routing_module';
@@ -16,6 +16,7 @@ export const appConfig: ApplicationConfig = {
 		{provide: 'IGraphQL', useClass: IotService},
 		{provide: 'IProfile', useClass: LocalStorageProfile},
 		{provide: 'AppService', useClass: AppService},
-		{provide: 'IotService', useClass: IotService}
+		{provide: 'IotService', useClass: IotService},
+		{provide: 'IAuth', useClass: AuthService},
 	]
 };

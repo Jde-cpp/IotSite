@@ -20,7 +20,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl: IErrorService ){
 		super( Requests.Transmission, http );
 		appService.iotInstances().then(
-			(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances},
+			(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
 			(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
 		);
 	}
@@ -30,7 +30,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		this.setSessionId( await this.post<string>('Login', {opc:domain, user:username, password:password}) );
 		if( this.log.restResults )	console.log( `sessionId='${self.sessionId}'` );
 	}
-	private encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
+	protected encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
 	protected handleConnectionError(){};
 	protected processMessage( buffer:protobuf.Buffer ){
 		try{
@@ -116,8 +116,8 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			Error.setMessages( json["errorCodes"] );
 		}
 	}
-	private async browseObjectsFolder( opcId:string, node:types.ExpandedNode, snapshot:boolean ):Promise<types.Reference[]>{
-		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${this.toParams(node.toJson())}&snapshot=${snapshot}`);
+	public async browseObjectsFolder( opcId:string, node:types.ExpandedNode, snapshot:boolean ):Promise<types.Reference[]>{
+		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${IotService.toParams(node.toJson())}&snapshot=${snapshot}`);
 		var y = [];
 		for( const ref of json["references"] )
 			y.push( new types.Reference(ref) );
@@ -189,7 +189,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 				this.#nodes.delete(key);
 		});
 	}
-	private addToSubscription( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ){
+	public addToSubscription( opcId:types.OpcId, nodes:types.ExpandedNode[], owner:Owner ){
 		let opcSubscriptions = this.getOpcSubscriptions( opcId );
 		for( const node of nodes ){
 			let owners:Owner[];
