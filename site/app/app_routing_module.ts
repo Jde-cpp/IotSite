@@ -8,8 +8,11 @@ import{ Applications, AppService, GraphQLComponent, GraphQLDetailComponent, Logi
 import{ IotService, OpcRouteService, OpcServer, IotAuthService } from 'jde-iot';
 
 
-export const routes: Routes =
-[
+export const routes: Routes = [
+	{ 
+		path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"}
+		//providers:[ {provide: 'I Auth', useClass: IotAuthService} ]
+	},
 	{
 		path: 'opcServers',
 		component: ComponentSidenav,
@@ -28,16 +31,17 @@ export const routes: Routes =
 		children :
 		[
 			{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } },
-			{ path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"}, providers:[ {provide: 'IAuth', useClass: IotAuthService}] },
+			//{ path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"} },
+			//, providers:[ {provide: 'IA uth', useClass: IotAuthService}]
 			//{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
 			{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
 			//{ path: 'logs', component: LogsComponent, data: { name: "Logs", summary: "View Application Logs" } },
 			{ path: 'users/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { excludedColumns:["isGroup","password"] } },
 			{ path: 'users', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Users", summary: "View/Modify Users", excludedColumns:["isGroup","password"] } },
-			{ path: 'roles/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
-			{ path: 'roles', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Roles", summary: "View/Modify Roles" } },
-			{ path: 'groups/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
-			{ path: 'groups', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Groups", summary: "View/Modify Groups" } },
+			//{ path: 'roles/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
+			//{ path: 'roles', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Roles", summary: "View/Modify Roles" } },
+			//{ path: 'groups/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
+			//{ path: 'groups', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Groups", summary: "View/Modify Groups" } },
 			{ path: 'opcServers', component: GraphQLComponent, data: { name: "OpcServers", summary: "View/Modify OPC Servers" } },
 			{ path: 'opcServers/:id', component: GraphQLDetailComponent },
 			//{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }

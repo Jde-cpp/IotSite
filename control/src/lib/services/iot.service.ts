@@ -17,7 +17,7 @@ type Owner = any;
 
 @Injectable( {providedIn: 'root'} )
 export class IotService extends ProtoService<Requests.ITransmission,Results.IMessageUnion> implements IGraphQL{
-	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl: IErrorService ){
+	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl:IErrorService ){
 		super( Requests.Transmission, http );
 		appService.iotInstances().then(
 			(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
@@ -27,8 +27,15 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 	async login( domain:string, username:string, password:string ){
 		let self = this;
 		if( this.log.restRequests )	console.log( `Login( opc='${domain}', username='${username}' )` );
-		this.setSessionId( await this.post<string>('Login', {opc:domain, user:username, password:password}) );
-		if( this.log.restResults )	console.log( `sessionId='${self.sessionId}'` );
+		try{
+			const sessionId = await this.post<string>( 'Login', {opc:domain, user:username, password:password} );
+			this.setSessionId( sessionId, domain ? `${domain}\\${username}` : username );
+		}
+		catch( e ){
+			this.setSessionId( "", "" );
+			throw e;
+		}
+		if( this.log.restResults )	console.log( `sessionId='${this.sessionId}'` );
 	}
 	protected encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
 	protected handleConnectionError(){};
@@ -37,7 +44,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			const transmission = Results.Transmission.decode( buffer );
 			for( const message of <Results.MessageUnion[]>transmission.messages ){
 				if( message.acknowledgement )
-					this.setSessionId( message.acknowledgement.id );
+					this.setSocketId( message.acknowledgement.id );
 				else if( message.nodeValues )
 					this.nodeValues( message.nodeValues );
 				else if( message.subscriptionAck )

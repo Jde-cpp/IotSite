@@ -96,7 +96,7 @@ export class OpcServer implements OnInit, OnDestroy, OnChanges {
 				this.viewPromise = Promise.resolve( true );
 		}
 		catch( e ){
-			this.cnsl.error( e["message"] ? e["message"] : e["error"]["message"] );
+			this.cnsl.exception( e );
 			if( e["stack"] )
 				console.error( e["stack"] );
 		}
