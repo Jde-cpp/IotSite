@@ -4,66 +4,66 @@ import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
 import { IErrorService } from 'jde-framework';
-import { Jde } from 'jde-framework'; import FromServer = Jde.Web.FromServer;
+//import { Jde } from 'jde-framework'; import FromServer = Jde.Web.FromServer;
 import * as types from '../types/types';
 import { Error } from '../types/Error';
 
-import * as IotCommon from '../proto/IotCommon'; import Common = IotCommon.Jde.Iot.Proto;
-import * as IotRequests from '../proto/IotFromClient'; import Requests = IotRequests.Jde.Iot.FromClient;
-import * as IotResults from '../proto/IotFromServer'; import Results = IotResults.Jde.Iot.FromServer;
+import * as IotCommon from '../proto/Iot.Common'; import Common = IotCommon.Jde.Iot.Proto;
+import * as IotRequests from '../proto/Iot.FromClient'; import FromClient = IotRequests.Jde.Iot.FromClient;
+import * as IotResults from '../proto/Iot.FromServer'; import FromServer = IotResults.Jde.Iot.FromServer;
 
 interface IError{ requestId:number; message: string; }
 type Owner = any;
 
 @Injectable( {providedIn: 'root'} )
-export class IotService extends ProtoService<Requests.ITransmission,Results.IMessageUnion> implements IGraphQL{
+export class IotService extends ProtoService<FromClient.ITransmission,FromServer.IMessage> implements IGraphQL{
 	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl:IErrorService ){
-		super( Requests.Transmission, http );
-		appService.iotInstances().then(
-			(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
-			(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
-		);
+		super( FromClient.Transmission, http, appService.transport );
+		// appService.iotInstances().then(
+		// 	(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
+		// 	(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
+		// );
 	}
 	async login( domain:string, username:string, password:string ){
 		let self = this;
 		if( this.log.restRequests )	console.log( `Login( opc='${domain}', username='${username}' )` );
 		try{
 			const sessionId = await this.post<string>( 'Login', {opc:domain, user:username, password:password} );
-			this.setSessionId( sessionId, domain ? `${domain}\\${username}` : username );
+			this.setAuthorization( sessionId, domain ? `${domain}\\${username}` : username );
 		}
 		catch( e ){
-			this.setSessionId( "", "" );
+			this.setAuthorization( "", "" );
 			throw e;
 		}
-		if( this.log.restResults )	console.log( `sessionId='${this.sessionId}'` );
+		if( this.log.restResults )	console.log( `authorization='${this.authorization}'` );
 	}
-	protected encode( t:Requests.Transmission ){ return Requests.Transmission.encode(t); }
+	protected encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	protected handleConnectionError(){};
 	protected processMessage( buffer:protobuf.Buffer ){
 		try{
-			const transmission = Results.Transmission.decode( buffer );
-			for( const message of <Results.MessageUnion[]>transmission.messages ){
-				if( message.acknowledgement )
-					this.setSocketId( message.acknowledgement.id );
+			const transmission = FromServer.Transmission.decode( buffer );
+			for( const message of <FromServer.Message[]>transmission.messages ){
+				let requestId = message.requestId;
+				if( message.ack )
+					this.setSocketId( message.ack );
 				else if( message.nodeValues )
 					this.nodeValues( message.nodeValues );
 				else if( message.subscriptionAck )
-					this.subscriptionAck( message.subscriptionAck );
-				else if( message.unsubscribeResult )
-					this.onUnsubscriptionResult( message.unsubscribeResult );
+					this.subscriptionAck( requestId, message.subscriptionAck );
+				else if( message.unsubscribeAck )
+					this.onUnsubscriptionResult( requestId, message.unsubscribeAck );
 				else if( message.exception ){
-					if( !this.processError(<IError>message.exception) )
-						throw message.exception;
+					const e = message.exception;
+					if( !this.processError( e, requestId ) )
+						throw e;
 				}
 				else
 					throw `unknown message:  ${JSON.stringify( message[message.Value] )}`;
 			}
 		}
 		catch( e ){
-			if( typeof(e)==typeof(FromServer.Exception) ){
-				const e2 = <FromServer.IException>e;
-				console.error( `(${e2.requestId})${e2.message}` );
-			}
+			if( e instanceof String )
+				console.error( e );
 			else
 				console.error( e );
 		}
@@ -152,28 +152,26 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		return types.toValue( json["snapshots"][0].value );
 	}
 
-	private onUnsubscriptionResult( result:Results.IUnsubscribeResult ){
+	private onUnsubscriptionResult( requestId, result:FromServer.IUnsubscribeAck ){
 		result.failures?.forEach( (node)=>console.log(`unsubscribe failed for:  ${IotService.toExpanded(node).toJson()}`) );
-		this._callbacks.get( result.requestId ).resolve( null );
+		this._callbacks.get( requestId ).resolve( null );
 	}
 
-	private subscriptionAck( ack:Results.ISubscriptionAck ){
-		this._callbacks.get( ack.requestId ).resolve( ack.results );
+	private subscriptionAck( requestId, ack:FromServer.ISubscriptionAck ){
+		this._callbacks.get( requestId ).resolve( ack.results );
 	}
 
 	private async _subscribe( opcId:types.OpcId, nodes:types.ExpandedNode[], subject:Subject<SubscriptionResult> ):Promise<void>{
-		const requestId = this.nextRequestId;
-		const request:Requests.ISubscribe = { nodes:IotService.toProto(nodes), opcId:opcId, requestId:requestId };
+		const request:FromClient.ISubscribe = { nodes:IotService.toProto(nodes), opcId:opcId };
 		let toDelete = new Array<types.ExpandedNode>();
 		try{
-		 	let y = await this.sendPromise<Requests.ISubscribe,Results.IMonitoredItemCreateResult[]>( "subscribe", request );
+		 	let y = await this.sendPromise<FromServer.IMonitoredItemCreateResult[]>( {"subscribe":request}, `subscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
 		 	for( let i=0; i<y.length; ++i ){
 				const node = nodes[i];
 				if( y[i].statusCode ){
 					toDelete.push( node );
 					let e = new Error( y[i].statusCode );
-					console.log( `Subscription failed for '${node}' - ${e}` );
-					//subject.error( {node:node,error:e} );  closes the subscription.
+					console.log( `Subscription failed for '${node} - ${e}` );
 				}
 		 	}
 		}
@@ -208,7 +206,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			else{
 				opcSubscriptions.set( node.key, [owner] ).get( node.key );
 				this.#nodes.set( node.key, node );
-			} 
+			}
 		}
 		let subject = this.#ownerSubscriptions.has( owner ) ? this.#ownerSubscriptions.get( owner ) : this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() ).get( owner );
 		this._subscribe( opcId, nodes, subject );
@@ -225,7 +223,7 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 	}
 
 	private static toGuid( proto:Uint8Array ):types.Guid{ let guid = new types.Guid(); guid.value = proto; return guid; }
-	private static toValue( proto:Results.IValue ):types.Value{
+	private static toValue( proto:FromServer.IValue ):types.Value{
 		let v:types.Value;
 		if( proto.boolean )
 			v = proto.boolean;
@@ -269,14 +267,14 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 			v = proto.xmlElement;
 		return v;
 	}
-	private static toValues( proto:Results.IValue[] ):types.Value{
+	private static toValues( proto:FromServer.IValue[] ):types.Value{
 		let value = proto.length==1 ? IotService.toValue( proto[0] ) : new Array<types.Value>();
 		if( proto.length>1 )
 			proto.forEach( v => (<types.Value[]>value).push( IotService.toValue(v) ) );
 		return value;
 	}
 
-	private nodeValues( nodeValues:Results.INodeValues ):void{
+	private nodeValues( nodeValues:FromServer.INodeValues ):void{
 		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
 		const node = IotService.toExpanded( nodeValues.node );
 		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner).next({opcId:nodeValues.opcId, node:node, value:IotService.toValues(nodeValues.values)}) );
@@ -311,9 +309,8 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 		}
 		if( toDeleteNodes.size ){
 			for( const [opcId, nodes] of toDeleteNodes ){
-				const requestId = this.nextRequestId;
-				var request:Requests.IUnsubscribe = { nodes:IotService.toProto(nodes), opcId:opcId, requestId:requestId };
-				this.sendPromise<Requests.IUnsubscribe,void>( "unsubscribe", request );
+				var request:FromClient.IUnsubscribe = { nodes:IotService.toProto(nodes), opcId:opcId };
+				this.sendPromise<void>( {"unsubscribe": request}, `unsubscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
 			}
 		}
 		this.clearUnusedNodes();
@@ -329,9 +326,8 @@ export class IotService extends ProtoService<Requests.ITransmission,Results.IMes
 
 		this.clearUnusedNodes();
 		if( toDelete.length ){
-			const requestId = this.nextRequestId;
-			var request:Requests.IUnsubscribe = { nodes:IotService.toProto(toDelete), opcId:opcId, requestId:requestId };
-			return this.sendPromise<Requests.IUnsubscribe,void>( "unsubscribe", request );
+			var request:FromClient.IUnsubscribe = { nodes:IotService.toProto(toDelete), opcId:opcId };
+			return this.sendPromise<void>( {"unsubscribe": request}, `unsubscribe opcId: ${opcId}, nodeCount: ${toDelete.length}` );
 		}
 		else
 			return Promise.resolve();

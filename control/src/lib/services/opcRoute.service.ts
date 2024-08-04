@@ -8,7 +8,7 @@ export class OpcRouteService implements IRouteService{
 	constructor( @Inject('IotService') private _iot:IotService ){}
 	async children():Promise<Routes>
 	{
-		let ql = await this._iot.query("query{ opcServers { id name deleted target description isDefault url } }" );
+		let ql = await this._iot.query("opcServers { id name deleted target description isDefault url }" );
 		let y = [];
 		for( const s of ql["opcServers"] )
 			y.push( { path: s.target, data: { name: s.name, summary: s.description } } );
