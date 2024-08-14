@@ -15,21 +15,23 @@ import * as IotResults from '../proto/Iot.FromServer'; import FromServer = IotRe
 interface IError{ requestId:number; message: string; }
 type Owner = any;
 
+//TODO make singleton.
 @Injectable( {providedIn: 'root'} )
 export class IotService extends ProtoService<FromClient.ITransmission,FromServer.IMessage> implements IGraphQL{
 	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl:IErrorService ){
 		super( FromClient.Transmission, http, appService.transport );
-		// appService.iotInstances().then(
-		// 	(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
-		// 	(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
-		// );
+		appService.iotInstances().then(
+		 	(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
+		 	(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
+		);
 	}
 	async login( domain:string, username:string, password:string ){
 		let self = this;
 		if( this.log.restRequests )	console.log( `Login( opc='${domain}', username='${username}' )` );
 		try{
-			const sessionId = await this.post<string>( 'Login', {opc:domain, user:username, password:password} );
-			this.setAuthorization( sessionId, domain ? `${domain}\\${username}` : username );
+			this.setAuthorization( "", "" );
+			const result = await this.postRaw<{sessionId:string}>( 'Login', {opc:domain, user:username, password:password}, true );//TODO also log out on server side.
+			this.setAuthorization( result.sessionId, domain ? `${domain}\\${username}` : username );
 		}
 		catch( e ){
 			this.setAuthorization( "", "" );
@@ -37,6 +39,7 @@ export class IotService extends ProtoService<FromClient.ITransmission,FromServer
 		}
 		if( this.log.restResults )	console.log( `authorization='${this.authorization}'` );
 	}
+
 	protected encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	protected handleConnectionError(){};
 	protected processMessage( buffer:protobuf.Buffer ){
@@ -44,8 +47,18 @@ export class IotService extends ProtoService<FromClient.ITransmission,FromServer
 			const transmission = FromServer.Transmission.decode( buffer );
 			for( const message of <FromServer.Message[]>transmission.messages ){
 				let requestId = message.requestId;
-				if( message.ack )
-					this.setSocketId( message.ack );
+				if( super.processCommonMessage(message, requestId) )
+					continue;
+				if( message.ack ){
+					console.log( `[App.${requestId}]Connected to '${super.socketUrl}', socketId: ${message.ack}` );
+					let socketId = message.ack;
+					if( this.authorization )
+						super.sendAuthorization( socketId );
+					else{
+						console.warn( `no authorization` );
+						this.setSocketId( socketId );
+					}
+				}
 				else if( message.nodeValues )
 					this.nodeValues( message.nodeValues );
 				else if( message.subscriptionAck )

@@ -5,11 +5,11 @@ import { ComponentCategoryList } from 'jde-material';
 import { ComponentSidenav } from 'jde-material';
 
 import{ Applications, AppService, GraphQLComponent, GraphQLDetailComponent, LoginPageComponent } from 'jde-framework';
-import{ IotService, OpcRouteService, OpcServer, IotAuthService } from 'jde-iot';
+import{ /*IotService,*/ OpcRouteService, OpcServer, IotAuthService } from 'jde-iot';
 
 
 export const routes: Routes = [
-	{ 
+	{
 		path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"}
 		//providers:[ {provide: 'I Auth', useClass: IotAuthService} ]
 	},
@@ -48,7 +48,7 @@ export const routes: Routes = [
 		]
 	}
 ];
-function setRoutes( iot:IotService ){
+function setRoutes(){
 	return routes;
 }
 
