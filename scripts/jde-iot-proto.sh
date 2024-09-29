@@ -13,10 +13,9 @@ echo 'jde-framework-proto done';
 cd projects/jde-iot/src/lib;
 moveToDir proto;
 
-#declare -A commonFiles;
-#if [ ! -f FromServer.d.ts ] || [ $clean == 1 ]; then commonFiles[FromServer]=from_server_root; fi;
-#create $jdeBash/Public/src/appClient/proto commonFiles;
-if [ ! -f Iot.Common.d.ts ]; then ln -s $jdeBash/Public/src/appClient/proto/Common.proto Common.proto; fi;
+declare -A commonFiles;
+if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then commonFiles[Common]=common_root; fi;
+create $jdeBash/Public/src/app/shared/proto commonFiles;
 
 declare -A iotFiles;
 if [ ! -f Iot.Common.d.ts ] || [ $clean == 1 ]; then iotFiles[Iot.Common]=iot_common_root; fi;

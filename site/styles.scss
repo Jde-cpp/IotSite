@@ -1,22 +1,22 @@
-@use '../node_modules/@angular/material' as matOld;
-@use '../node_modules/@angular/material-experimental' as mat;
+@use '../node_modules/@angular/material' as mat;
+//@use '../node_modules/@angular/material-experimental' as mat;
 @use '../projects/jde-material/src/app-theme';
 
 $theme: mat.define-theme((
   color: (
     theme-type: light,
-    primary: mat.$m3-azure-palette,
-    tertiary: mat.$m3-blue-palette,
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
   )
 ));
 
 // Include material core styles.
-@include matOld.core();
-//@include matOld.color-variants-backwards-compatibility($theme);
+@include mat.core();
+@include mat.color-variants-backwards-compatibility($theme);
 @include app-theme.theme($theme);
 
 :root {
-  @include matOld.all-component-themes($theme);
+  @include mat.all-component-themes($theme);
 }
 
 // .accentBackground
