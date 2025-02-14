@@ -3,8 +3,9 @@ import { Component, Inject, Renderer2, ViewEncapsulation } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import {NavBar} from 'jde-material';
 
-@Component( {selector: 'app-root', standalone: true, templateUrl: './app.component.html', styleUrls: ['./app.component.scss'], encapsulation: ViewEncapsulation.None,
-  imports: [CommonModule, NavBar, RouterOutlet],  
+@Component( {
+    selector: 'app-root', templateUrl: './app.component.html', styleUrls: ['./app.component.scss'], encapsulation: ViewEncapsulation.None,
+    imports: [CommonModule, NavBar, RouterOutlet]
 })
 export class AppComponent{
 	constructor (

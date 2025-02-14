@@ -15,11 +15,10 @@ import { IEnvironment } from 'jde-material';
 
 
 @Component({
-  selector: 'opc-server',
-  templateUrl: './OpcServer.html',
-  styleUrls: ['./OpcServer.scss'],
-  standalone: true,
-		imports: [NgFor,NgIf,AsyncPipe, MatTableModule, RouterModule,MatButtonModule,MatCheckboxModule]
+    selector: 'opc-server',
+    templateUrl: './OpcServer.html',
+    styleUrls: ['./OpcServer.scss'],
+    imports: [NgFor, NgIf, AsyncPipe, MatTableModule, RouterModule, MatButtonModule, MatCheckboxModule]
 })
 export class OpcServer implements OnInit, OnDestroy, OnChanges {
 	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IEnvironment') private environment: IEnvironment, @Inject('IErrorService') private cnsl: IErrorService ){
