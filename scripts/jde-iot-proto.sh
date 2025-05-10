@@ -13,14 +13,15 @@ echo 'jde-framework-proto done';
 cd projects/jde-iot/src/lib;
 moveToDir proto;
 
-declare -A commonFiles;
-if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then commonFiles[Common]=common_root; fi;
-create $jdeBash/Public/src/app/shared/proto commonFiles;
+#declare -A commonFiles;
+#if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then commonFiles[Common]=common_root; fi;
+#create $jdeBash/Public/libs/app/shared/proto commonFiles;
 
-declare -A iotFiles;
-if [ ! -f Iot.Common.d.ts ] || [ $clean == 1 ]; then iotFiles[Iot.Common]=iot_common_root; fi;
-if [ ! -f Iot.FromServer.d.ts ] || [ $clean == 1 ]; then iotFiles[Iot.FromServer]=iot_from_server_root; fi;
-if [ ! -f Iot.FromClient.d.ts ] || [ $clean == 1 ]; then iotFiles[Iot.FromClient]=iot_from_client_root; fi;
-create $jdeBash/Public/src/iot/types/proto iotFiles;
+declare -A opcFiles;
+if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then opcFiles[Common]=common_root; fi;
+if [ ! -f Opc.Common.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.Common]=opc_common_root; fi;
+if [ ! -f Opc.FromServer.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.FromServer]=opc_from_server_root; fi;
+if [ ! -f Opc.FromClient.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.FromClient]=opc_from_client_root; fi;
+create $jdeBash/Public/libs/opc/src/types/proto opcFiles;
 
 popd > /dev/null;

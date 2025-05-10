@@ -13,6 +13,7 @@ import {NavBar} from 'jde-material';
 
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app_routing_module';
+//import { AuthGuard } from '../../projects/jde-access/src/lib/services/auth.guard';
 
 @NgModule({
   	imports: [

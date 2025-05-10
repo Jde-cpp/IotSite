@@ -1,50 +1,100 @@
 import { NgModule } from '@angular/core';
 import {Routes, ROUTES, RouterModule} from '@angular/router';
-
-import { ComponentCategoryList } from 'jde-material';
 import { ComponentSidenav } from 'jde-material';
 
-import{ Applications, AppService, GraphQLComponent, GraphQLDetailComponent, LoginPageComponent } from 'jde-framework';
-import{ /*IotService,*/ OpcRouteService, OpcServer, IotAuthService } from 'jde-iot';
+import{ Applications, DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService } from 'jde-framework';
+import{ OpcRouteService, OpcNodeRouteService, OpcServer, NodeResolver, IotService, GatewayDetail, NodeDetail } from 'jde-iot';
+import { AccessService, AuthGuard, Group, GroupDetail, Role, RoleDetail, User, UserDetail } from 'jde-access';
 
+
+const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
+const iotProvider = { provide: 'IGraphQL', useClass: IotService };
+const qlListProvider = { provide: 'IRouteService', useClass: QLListRouteService };
+const opcNodeRouteProvider = { provide: 'IRouteService', useClass: OpcNodeRouteService };;
 
 export const routes: Routes = [
-	{
-		path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"}
-		//providers:[ {provide: 'I Auth', useClass: IotAuthService} ]
-	},
-	{
-		path: 'opcServers',
+	{ path: '', title: "Home", component: Cards, data: {summary: "Welcome" },
+		canActivate: [AuthGuard],
+		providers: [  {provide: 'IRouteService', useClass: HomeRouteService} ]},
+	{ path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"} },
+
+	{ path: 'opcServers', title: "OPC Servers", canActivate: [AuthGuard], component: Cards,
+		providers: [{provide: 'IRouteService', useClass: OpcRouteService}], data: {
+		summary: "Available OPC Servers",
+	} },
+	{ path: 'opcServers',
 		component: ComponentSidenav,
-		data: { name: "OPC Servers" },
-		children :
-		[
-			{ path: '', component: ComponentCategoryList, data: { name: "OPC Servers", summary: "OPC Servers" }, providers: [ {provide: 'IRouteService', useClass: OpcRouteService}] },
-			{ path: ':opc', component: OpcServer },
-			{ path: ':opc/:id/:ns', component: OpcServer },
+		children :[
+			{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },
+			{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },
 		]
 	},
-	{
-		path: 'settings',
-		component: ComponentSidenav,
-		data: { name: "Settings" },
-		children :
+
+	{ path: 'access', title: "Access", component: Cards, providers: [qlListProvider], canActivate: [AuthGuard], data: {
+		summary: "Configure User Access"
+	} },
+	{ path: 'access', component: ComponentSidenav, canActivate: [AuthGuard], providers:[qlListProvider],
+			children :[
+				{ path: 'users/:target',
+					component: UserDetail,
+					providers: [ DetailResolver<User>, accessProvider ],
+					resolve: { pageData: DetailResolver<User> },
+					canActivate: [AuthGuard],
+					runGuardsAndResolvers: "paramsChange"
+				},
+				{ path: 'groups/:target',
+					component: GroupDetail,
+					providers: [ DetailResolver<Group>, accessProvider ],
+					resolve: { pageData: DetailResolver<Group> },
+					canActivate: [AuthGuard],
+					runGuardsAndResolvers: "paramsChange"
+				},
+				{ path: 'roles/:target',
+					component: RoleDetail,
+					providers: [ DetailResolver<Role>, accessProvider ],
+					data: { summary: "Role Detail" },
+					resolve: { pageData: DetailResolver<Role> },
+					canActivate: [AuthGuard],
+					runGuardsAndResolvers: "paramsChange"
+				},
+				{ path: ':collectionDisplay',
+					component: QLList,
+					runGuardsAndResolvers: "paramsChange",
+					providers: [ QLListResolver, accessProvider ],
+					resolve: { data: QLListResolver },
+					canActivate: [AuthGuard],
+					data: { collections: [
+						"users",
+						{ path:"groups", data:{collectionName: "groupings"} },
+						"roles",
+						{ path:"resources", data:{canPurge:false} }
+					]}
+				},
+			]
+	},
+	{ path: 'settings', title: "Settings", canActivate: [AuthGuard], component: Cards, providers: [qlListProvider] },
+	{ path: 'settings', component: ComponentSidenav, providers: [qlListProvider],
+		children:
 		[
-			{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } },
-			//{ path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"} },
-			//, providers:[ {provide: 'IA uth', useClass: IotAuthService}]
-			//{ path: '', component: GraphQLDetailComponent, pathMatch: 'full', data: {} },
-			{ path: 'applications', component: Applications, data: { name: "Applications", summary: "View Applications" } },
-			//{ path: 'logs', component: LogsComponent, data: { name: "Logs", summary: "View Application Logs" } },
-			{ path: 'users/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { excludedColumns:["isGroup","password"] } },
-			{ path: 'users', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Users", summary: "View/Modify Users", excludedColumns:["isGroup","password"] } },
-			//{ path: 'roles/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
-			//{ path: 'roles', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Roles", summary: "View/Modify Roles" } },
-			//{ path: 'groups/:id', component: GraphQLDetailComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}] },
-			//{ path: 'groups', component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AppService}], data: { name: "Groups", summary: "View/Modify Groups" } },
-			{ path: 'opcServers', component: GraphQLComponent, data: { name: "OpcServers", summary: "View/Modify OPC Servers" } },
-			{ path: 'opcServers/:id', component: GraphQLDetailComponent },
-			//{ path: '', component: ComponentCategoryList, data: { name: "Settings", summary: "Site Settings" } }
+			{ path: 'applications', component: Applications, title: "Applications", canActivate: [AuthGuard], data: { summary: "View Applications" } },
+			{
+				path: ':collectionDisplay',
+				component: QLList,
+				providers:[ QLListResolver, iotProvider],
+				resolve: {data : QLListResolver},
+				canActivate: [AuthGuard],
+				data: { collections: [
+					{ path:"opcServers", title: "OPC Servers", data:{summary: "Change Configured OPC Servers", collectionName: "servers"} },
+				]}
+			},
+			{
+				path: 'opcServers/:target',
+				component: GatewayDetail,
+				providers: [ DetailResolver<OpcServer>, iotProvider ],
+				canActivate: [AuthGuard],
+				data: { summary: "Opc Gateway Detail" },
+				resolve: { pageData: DetailResolver<OpcServer> }
+			}
 		]
 	}
 ];
@@ -53,11 +103,8 @@ function setRoutes(){
 }
 
 @NgModule( { imports: [RouterModule.forRoot([])], exports: [RouterModule],
-	providers: [{
-      provide: ROUTES,
-      useFactory: setRoutes,
-			multi: true
-	}]})
- export class AppRoutingModule {
- }
-
+	providers: [
+		{ provide: ROUTES, useFactory: setRoutes, multi: true },AuthGuard]
+})
+export class AppRoutingModule
+{}

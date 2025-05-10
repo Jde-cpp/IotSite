@@ -3,10 +3,8 @@ export interface IError{
 	message:string;
 }
 
-export class Error implements IError
-{
-	constructor( public sc:number )
-	{
+export class Error implements IError{
+	constructor( public sc:number ){
 		if( !Error.messages.has(sc) )
 			Error.messages.set( sc, null );
 	}

@@ -1,16 +1,18 @@
-import { Injectable, Inject } from '@angular/core';
-import { IGraphQL, ProtoService, AppService } from 'jde-framework'; //Mutation, DateUtilities, IQueryResult
-import { HttpClient } from '@angular/common/http';
-import { HttpErrorResponse } from '@angular/common/http';
+import { Injectable, Inject, inject } from '@angular/core';
+import { IGraphQL, ProtoService, AppService, AuthStore } from 'jde-framework'; //Mutation, DateUtilities, IQueryResult
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
 import { IErrorService } from 'jde-framework';
-//import { Jde } from 'jde-framework'; import FromServer = Jde.Web.FromServer;
-import * as types from '../types/types';
-import { Error } from '../types/Error';
+import { EProvider, IAuth, LoggedInUser } from 'jde-material';
 
-import * as IotCommon from '../proto/Iot.Common'; import Common = IotCommon.Jde.Iot.Proto;
-import * as IotRequests from '../proto/Iot.FromClient'; import FromClient = IotRequests.Jde.Iot.FromClient;
-import * as IotResults from '../proto/Iot.FromServer'; import FromServer = IotResults.Jde.Iot.FromServer;
+import * as types from '../model/types';
+import { Error } from '../model/Error';
+
+import * as IotCommon from '../proto/Opc.Common'; import Common = IotCommon.Jde.Opc.Proto;
+import * as IotRequests from '../proto/Opc.FromClient'; import FromClient = IotRequests.Jde.Opc.FromClient;
+import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotResults.Jde.Opc.FromServer;
+import { OpcStore } from './opc-store';
+import { NodeRoute } from '../model/NodeRoute';
 
 interface IError{ requestId:number; message: string; }
 type Owner = any;
@@ -18,26 +20,40 @@ type Owner = any;
 //TODO make singleton.
 @Injectable( {providedIn: 'root'} )
 export class IotService extends ProtoService<FromClient.ITransmission,FromServer.IMessage> implements IGraphQL{
-	constructor( http: HttpClient, @Inject('AppService') public appService:AppService, @Inject('IErrorService') private cnsl:IErrorService ){
-		super( FromClient.Transmission, http, appService.transport );
+
+	constructor( http: HttpClient, public appService:AppService, @Inject('IErrorService') private cnsl:IErrorService, @Inject("AuthStore") authStore:AuthStore ){
+		super( FromClient.Transmission, http, appService.transport, authStore );
 		appService.iotInstances().then(
 		 	(instances)=>{if(instances.length==0) console.error("No IotServies running");super.instances = instances;},
 		 	(e:HttpErrorResponse)=>{debugger;console.error(`Could not get IotServices.  (${e.status})${e.message}`);}
 		);
 	}
-	async login( domain:string, username:string, password:string ){
+	async login( domain:string, username:string, password:string ):Promise<void>{
 		let self = this;
 		if( this.log.restRequests )	console.log( `Login( opc='${domain}', username='${username}' )` );
 		try{
-			this.setAuthorization( "", "" );
-			const result = await this.postRaw<{sessionId:string}>( 'Login', {opc:domain, user:username, password:password}, true );//TODO also log out on server side.
-			this.setAuthorization( result.sessionId, domain ? `${domain}\\${username}` : username );
+			await this.logout();
+			const result = await this.postRaw<any>( 'login', {opc:domain, user:username, password:password}, true );//TODO also log out on server side.
+			if( this.log.restResults ) console.log( `authorization='${JSON.stringify(result)}'` );
+			let user:LoggedInUser = {
+				id: domain ? `${domain}\\${username}` : username,
+				domain: domain,
+				name: username,
+				provider: EProvider.OpcServer
+			};
+			this.authStore.append( user );
 		}
 		catch( e ){
-			this.setAuthorization( "", "" );
 			throw e;
 		}
-		if( this.log.restResults )	console.log( `authorization='${this.authorization}'` );
+	}
+
+	async logout():Promise<void>{
+		let self = this;
+		if( this.log.restRequests )	console.log( `logout()` );
+		await this.post<string>( 'logout', {} );
+		this.authStore.logout();
+		if( this.log.restResults ) console.log( `logout` );
 	}
 
 	protected encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
@@ -52,7 +68,7 @@ export class IotService extends ProtoService<FromClient.ITransmission,FromServer
 				if( message.ack ){
 					console.log( `[App.${requestId}]Connected to '${super.socketUrl}', socketId: ${message.ack}` );
 					let socketId = message.ack;
-					if( this.authorization )
+					if( this.user()?.authorization )
 						super.sendAuthorization( socketId );
 					else{
 						console.warn( `no authorization` );
@@ -127,26 +143,25 @@ export class IotService extends ProtoService<FromClient.ITransmission,FromServer
 		return protoNodes;
 	}
 
-	private async updateErrorCodes()
-	{
+	private async updateErrorCodes(){
 		const scs = Error.emptyMessages();
-		if( scs.length )
-		{
+		if( scs.length ){
 			const json = await super.get( `ErrorCodes?scs=${scs.join(',')}` );
 			Error.setMessages( json["errorCodes"] );
 		}
 	}
 	public async browseObjectsFolder( opcId:string, node:types.ExpandedNode, snapshot:boolean ):Promise<types.Reference[]>{
-		const json = await super.get(`BrowseObjectsFolder?opc=${opcId}&${IotService.toParams(node.toJson())}&snapshot=${snapshot}`);
+		const json = await super.get(`browseObjectsFolder?opc=${opcId}&${IotService.toParams(node.toJson())}&snapshot=${snapshot}`);
 		var y = [];
 		for( const ref of json["references"] )
 			y.push( new types.Reference(ref) );
+		this.#store.setReferences( opcId, node, y );
 		this.updateErrorCodes();
 		return y;
 	}
 	async snapshot( opcId:string, nodes:types.ExpandedNode[] ):Promise<Map<types.ExpandedNode,types.Value>>{
 		const args = encodeURIComponent( JSON.stringify(nodes.map(n=>n.toJson())) );
-		const json = await super.get( `Snapshot?opc=${opcId}&nodes=${args}` );
+		const json = await super.get( `snapshot?opc=${opcId}&nodes=${args}` );
 		var y = new Map<types.ExpandedNode,types.Value>();
 		for( const snapshot of json["snapshots"] )
 			y.set( new types.ExpandedNode(snapshot.node), snapshot.value );
@@ -156,13 +171,17 @@ export class IotService extends ProtoService<FromClient.ITransmission,FromServer
 	async write( opcId:string, n:types.ExpandedNode, v:types.Value ):Promise<types.Value>{
 		const nodeArgs = encodeURIComponent( JSON.stringify([n.toJson()]) );
 		const valueArgs = encodeURIComponent( JSON.stringify([v]) );
-		const json = await super.get( `Write?opc=${opcId}&nodes=${nodeArgs}&values=${valueArgs}` );
+		const json = await super.get( `write?opc=${opcId}&nodes=${nodeArgs}&values=${valueArgs}` );
 		if( json["snapshots"][0].sc ){
 			const e:Error = new Error( json["snapshots"][0].sc[0] );
 			this.updateErrorCodes();
 			throw e;
 		}
 		return types.toValue( json["snapshots"][0].value );
+	}
+
+	setRoute(route: NodeRoute) {
+		this.#store.setRoute(route);
 	}
 
 	private onUnsubscriptionResult( requestId, result:FromServer.IUnsubscribeAck ){
@@ -345,5 +364,7 @@ export class IotService extends ProtoService<FromClient.ITransmission,FromServer
 		else
 			return Promise.resolve();
 	}
+
+	#store = inject( OpcStore );
 }
 export type SubscriptionResult = {opcId:string, node:types.ExpandedNode,value:types.Value};

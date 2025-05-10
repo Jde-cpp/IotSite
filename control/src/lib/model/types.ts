@@ -1,5 +1,5 @@
 import Long from "long";
-import {Error} from "./Error";
+import {Error} from "../model/Error";
 
 export class Guid{
 	constructor( x?:string ){
@@ -89,7 +89,6 @@ export class Node implements INode{
 		else if( typeof this.ns === "number" && this.ns )
 			json.ns = this.ns;
 
-		let idValue = this.id;
 		if( typeof this.id === "number" )
 			json.i = this.id;
 		else if( typeof this.id === "string" )

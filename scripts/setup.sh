@@ -12,8 +12,8 @@ fetchDir master WebFramework $shouldFetch;
 fetchDir master MaterialSite $shouldFetch;
 if (( $buildPrivate == 1 )); then fetchDir WebBlockly $shouldFetch; fi;
 cd $scriptDir/..;
-
-cmd="../WebFramework/scripts/create-workspace.sh my-workspace MaterialSite WebFramework IotSite";
+baseWebDir=$JDE_DIR/web;
+cmd="../WebFramework/scripts/create-workspace.sh my-workspace $baseWebDir/MaterialSite $baseWebDir/WebFramework $JDE_DIR/Public/web/access $baseWebDir/IotSite";
 if (( $buildPrivate == 1 )); then cmd="$cmd WebBlockly"; fi;
 echo $cmd
 $cmd; if [ $? -ne 0 ]; then echo `pwd`; echo $cmd; exit 1; fi;
@@ -35,7 +35,7 @@ addHard app.component.html $sitePath/app;
 addHard app.component.scss $sitePath/app;
 addHard app.component.ts $sitePath/app;
 addHard app.module.ts $sitePath/app;
-rm app.config.ts;
+rm -f app.config.ts;
 addHard app.config.ts $sitePath/app;
 moveToDir services;
 addHard environment.service.ts $sitePath/app/services;
