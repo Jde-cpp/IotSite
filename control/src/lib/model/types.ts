@@ -132,7 +132,7 @@ export class ExpandedNode extends Node implements IExpandedNode{
   }
 	serverIndex:number;
 	nsu:string;
-	#key:NodeKey;
+	#key:NodeKey; //for Map
 	static defaultNS:number = 0;//TODO set from environment and document.
 }
 

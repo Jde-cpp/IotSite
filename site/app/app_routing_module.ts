@@ -25,8 +25,8 @@ export const routes: Routes = [
 	{ path: 'opcServers',
 		component: ComponentSidenav,
 		children :[
-			{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },
-			{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },
+			{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "pathParamsOrQueryParamsChange" }/*,
+			{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },*/
 		]
 	},
 
@@ -64,7 +64,7 @@ export const routes: Routes = [
 					resolve: { data: QLListResolver },
 					canActivate: [AuthGuard],
 					data: { collections: [
-						"users",
+						{ path:"users", data:{showAdd:false} },
 						{ path:"groups", data:{collectionName: "groupings"} },
 						"roles",
 						{ path:"resources", data:{canPurge:false} }
@@ -76,7 +76,7 @@ export const routes: Routes = [
 	{ path: 'settings', component: ComponentSidenav, providers: [qlListProvider],
 		children:
 		[
-			{ path: 'applications', component: Applications, title: "Applications", canActivate: [AuthGuard], data: { summary: "View Applications" } },
+//			{ path: 'applications', component: Applications, title: "Applications", canActivate: [AuthGuard], data: { summary: "View Applications" } },
 			{
 				path: ':collectionDisplay',
 				component: QLList,

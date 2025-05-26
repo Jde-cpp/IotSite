@@ -3,7 +3,7 @@
 	(selectedIndexChange)="tabIndexChanged($event)"
 	dynamicHeight="true">
 	<mat-tab>
-		<ng-template mat-tab-label>{{properties().name}}</ng-template>
+		<ng-template mat-tab-label>{{properties().name ?? "Properties"}}</ng-template>
 		<ng-template matTabContent>
 			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema></properties>
 		</ng-template>

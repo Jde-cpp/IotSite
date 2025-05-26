@@ -7,8 +7,7 @@ import { IProfile, Settings } from "jde-framework";
 
 export class NodeRoute implements DocItem{
 	constructor( private route:ActivatedRouteSnapshot, profileService: IProfile ){
-		let id = route.paramMap.has("id") ? +route.paramMap.get("id") : types.ENodes.ObjectsFolder;
-		this.node = new types.ExpandedNode( {i: id} );
+		this.node = new types.ExpandedNode( Object.keys(route.queryParams).length ? route.queryParams : {i:types.ENodes.ObjectsFolder} );
 		this.settings = new Settings<UserProfile>( UserProfile, this.profileKey, profileService );
 	}
 

@@ -33,7 +33,7 @@
 						<span>{{r.displayName.text}}</span>
 					}
 					@else{
-						<a [routerLink]="['/opcServers/'+opcTarget+'/'+r.node.id]" routerLinkActive="router-link-active" >{{r.displayName.text}}</a>
+						<a [routerLink]="['/opcServers/'+opcTarget]" [queryParams]=r.node.toJson() routerLinkActive="router-link-active" >{{r.displayName.text}}</a>
 				}
 				</mat-cell>
 			</ng-container>
