@@ -81,7 +81,7 @@ export class Node implements INode{
 		else
 			this.id = Node.defaultNode;
 	}
-	public equals( obj: Node ):boolean{ return (this.ns ?? 0)==(obj.ns ?? 0) && this.id==obj.id; }
+	public equals( rhs: Node ):boolean{ return (this.ns ?? 0)==(rhs.ns ?? 0) && this.id==rhs.id; }
 	toJson():NodeJson{
 		let json:NodeJson = {};
 		if( typeof this.ns === "string" )
@@ -99,6 +99,23 @@ export class Node implements INode{
 			json.b = btoa( this.id.reduce((acc, current) => acc + String.fromCharCode(current), "") );
 
 		return json;
+	}
+	toQueryParams():string{
+		let json = this.toJson();
+		let params = [];
+		if( json.nsu )
+			params.push( `nsu=${json.nsu}` );
+		else if( json.ns )
+			params.push( `ns=${json.ns}` );
+		if( json.i )
+			params.push( `i=${json.i}` );
+		else if( json.s )
+			params.push( `s=${json.s}` );
+		else if( json.g )
+			params.push( `g=${json.g}` );
+		else if( json.b )
+			params.push( `b=${json.b}` );
+		return params.join( "&" );
 	}
 	ns:number;
 	id:NodeId;
