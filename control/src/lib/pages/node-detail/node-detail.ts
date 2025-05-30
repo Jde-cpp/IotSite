@@ -29,10 +29,8 @@ export class NodeDetail implements OnInit, OnDestroy {
 	async ngOnInit() {
 		//subscribe( this.route, "NodeDetail" );
 		this.route.data.subscribe( (data)=>{
-			console.log( `NodeDetail.dataChange` );
 			this.pageData = data["pageData"];
 			this.sideNav.set( this.pageData.route );
-			console.trace( `NodeDetail.ngOnInit{ ref_count: ${this.pageData.references.length} }` );
 			this.references?.filter((r)=>this.profile.subscriptions.find((s)=>s.equals(r.node))).forEach((r)=>this.selections.select(r));
 			this.isLoading.set( false );
 		});
@@ -40,7 +38,6 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 
   ngOnDestroy() {
-		console.trace( `NodeDetail.ngOnDestroy` );
 		this.selections.clear();
 		this.selections.changed.unsubscribe();
 		this.pageData.route.settings.save();

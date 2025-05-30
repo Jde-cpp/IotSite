@@ -8,12 +8,12 @@ class StoreNode{
 	constructor( node:types.Reference|types.ExpandedNode ){
 		this.ref = node;
 	}
-	parent:types.NodeId;
+	parent:types.Node;
 	ref:types.Reference|types.ExpandedNode;
-	children:types.NodeId[] = [];
+	children:types.NodeJson[] = [];
 }
 
-type NodeId = string;
+type NodeId = string; //stringify(NodeJson)
 @Injectable({providedIn: 'root'})
 export class OpcStore{
 	constructor(){
@@ -25,17 +25,18 @@ export class OpcStore{
 			this.#opcServers.set( opcId, nodes = new Map<NodeId,StoreNode>() );
 		return nodes;
 	}
-	private findStore( opcTarget:OpcServerTarget, nodeId:types.NodeId ):StoreNode{
+	private findStore( opcTarget:OpcServerTarget, node:types.NodeJson ):StoreNode{
 		let opcNodes = this.#opcServers.get( opcTarget );
 		let store:StoreNode;
 		if( opcNodes )
-			store = opcNodes.get( nodeId.toString() );
+			store = opcNodes.get( JSON.stringify(node) );
 		return store;
 	}
 	private getStore( nodes:Map<NodeId,StoreNode>, node:types.ExpandedNode ):StoreNode{
-		let store = nodes.get( node.id.toString() );
+		const key = JSON.stringify( node.toJson() );
+		let store = nodes.get( key );
 		if( !store )
-			nodes.set( node.id.toString(), store = new StoreNode(node) );
+			nodes.set( key, store = new StoreNode(node) );
 		return store;
 	}
 	setOpcServers( servers: DocItem[]) {
@@ -49,34 +50,34 @@ export class OpcStore{
 		let store = this.getStore( opcNodes, node );
 		store.children = [];
 		for( let child of children ){
-			store.children.push( child.node.id );
+			store.children.push( child.node.toJson() );
 			let childStore = this.getStore( opcNodes, child.node );
-			childStore.parent = node.id;
+			childStore.parent = node;
 			childStore.ref = child;
 		}
 	}
 	setRoute(route: NodeRoute) {
 		if( route.node.id == types.ENodes.ObjectsFolder ){
-			route.siblings = this.#opcServerRoutes ?? [{title: route.opcTarget, path: route.opcTarget}];
+			route.siblings = this.#opcServerRoutes ?? [new DocItem({title: route.opcTarget, path: route.opcTarget})];
 			return;
 		}
-		const store = this.findStore( route.opcTarget, route.node.id );
+		const store = this.findStore( route.opcTarget, route.node.toJson() );
 		if( store?.parent ){
-			const parentStore = this.findStore( route.opcTarget, store.parent );
+			const parentStore = this.findStore( route.opcTarget, store.parent.toJson() );
 			if( parentStore ){
 				const parentRef = parentStore.ref;
 				if( parentRef instanceof types.Reference )
-					route.parent = { path: `${route.opcTarget}/${parentRef.node.id.toString()}`, title: parentRef.browseName.name.toString() };
+					route.parent = new DocItem( {path: route.opcTarget, queryParams: parentRef.node.toJson(), title: parentRef.browseName.name.toString()} );
 				else if( parentRef.id == types.ENodes.ObjectsFolder ){
 					let opcServer = this.#opcServerRoutes?.find( (r)=>r.path==route.opcTarget );
-					route.parent = { path: route.opcTarget, title: opcServer ? opcServer.title : route.opcTarget };
+					route.parent = new DocItem( {path: route.opcTarget, title: opcServer ? opcServer.title : route.opcTarget} );
 				}
 				route.siblings = [];
-				for( const siblingId of parentStore.children ){
-					const siblingStore = siblingId==route.node.id ? store : this.findStore( route.opcTarget, siblingId );
-					const sibling = siblingStore?.ref as types.Reference;
-					if( sibling instanceof types.Reference )
-						route.siblings.push( {path: `${route.opcTarget}/${sibling.node.id.toString()}`, title: sibling.browseName.name.toString()} );
+				for( const sibling of parentStore.children ){
+					const siblingStore = new types.Node(sibling).equals( route.node ) ? store : this.findStore( route.opcTarget, sibling );
+					const siblingRef = siblingStore?.ref as types.Reference;
+					if( siblingRef instanceof types.Reference && siblingRef.node )
+						route.siblings.push( new DocItem( {path: route.opcTarget, queryParams: siblingRef.node.toJson(), title: siblingRef.browseName.name.toString()}) );
 				}
 			}
 		}

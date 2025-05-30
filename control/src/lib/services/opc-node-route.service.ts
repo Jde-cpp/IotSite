@@ -4,9 +4,6 @@ import { Routes, UrlSegment } from "@angular/router";
 
 @Injectable( {providedIn: 'root'} )
 export class OpcNodeRouteService implements IRouteService{
-	constructor(){
-		console.log( `OpcNodeRouteService::OpcNodeRouteService` );
-	}
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
 	}

@@ -14,12 +14,10 @@ export class NodeResolver implements Resolve<NodePageData> {
 	constructor( private route: ActivatedRoute, private router:Router, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private snackbar: IErrorService, @Inject('IotService') private iot:IotService ){}
 
 	async load( route:NodeRoute ):Promise<NodePageData>{
-		console.trace( `NodeResolver.load( ${route.opcTarget}, ${JSON.stringify(route.node.toJson())} )` );
 		try{
 			await route.settings.loadedPromise;
 			let references = await this.iot.browseObjectsFolder( route.opcTarget, route.node, true );
 			this.iot.setRoute( route );
-			console.trace( `~NodeResolver.load` );
 			return { route: route, references: references };
 		}catch( e ){
 			this.snackbar.error( `Not found:  '${route.opcTarget}/${route.node.toJson()}'`, e );
