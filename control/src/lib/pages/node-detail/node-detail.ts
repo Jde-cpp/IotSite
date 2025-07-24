@@ -13,7 +13,7 @@ import { IEnvironment } from 'jde-material';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../services/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
-import { OpcNodeRouteService } from 'jde-iot';
+import { OpcNodeRouteService } from '../../services/opc-node-route.service';
 
 @Component({
   selector: 'node-detail',

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, ActivatedRouteSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { IErrorService, IProfile, Settings, TableSchema } from 'jde-framework';
-import { IotService, OpcNodeRouteService } from 'jde-iot';
+import { IotService } from '../services/iot.service';
 import * as types from '../model/types';
 import { NodeRoute, UserProfile } from '../model/NodeRoute';
 

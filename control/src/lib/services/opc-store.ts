@@ -20,13 +20,13 @@ export class OpcStore{
 		console.log( `OpcStore::OpcStore` );
 	}
 	private getNodes( opcId:OpcServerTarget ):Map<NodeId,StoreNode>{
-		let nodes = this.#opcServers.get( opcId );
+		let nodes = this.#opcClients.get( opcId );
 		if( !nodes )
-			this.#opcServers.set( opcId, nodes = new Map<NodeId,StoreNode>() );
+			this.#opcClients.set( opcId, nodes = new Map<NodeId,StoreNode>() );
 		return nodes;
 	}
 	private findStore( opcTarget:OpcServerTarget, node:types.NodeJson ):StoreNode{
-		let opcNodes = this.#opcServers.get( opcTarget );
+		let opcNodes = this.#opcClients.get( opcTarget );
 		let store:StoreNode;
 		if( opcNodes )
 			store = opcNodes.get( JSON.stringify(node) );
@@ -39,9 +39,9 @@ export class OpcStore{
 			nodes.set( key, store = new StoreNode(node) );
 		return store;
 	}
-	setOpcServers( servers: DocItem[]) {
-		this.#opcServerRoutes = [...servers];
-		for( let route of this.#opcServerRoutes )
+	setOpcClients( clients: DocItem[]) {
+		this.#opcClientRoutes = [...clients];
+		for( let route of this.#opcClientRoutes )
 			route.path = route.path.substring( route.path.lastIndexOf("/")+1 );
 	}
 
@@ -58,7 +58,7 @@ export class OpcStore{
 	}
 	setRoute(route: NodeRoute) {
 		if( route.node.id == types.ENodes.ObjectsFolder ){
-			route.siblings = this.#opcServerRoutes ?? [new DocItem({title: route.opcTarget, path: route.opcTarget})];
+			route.siblings = this.#opcClientRoutes ?? [new DocItem({title: route.opcTarget, path: route.opcTarget})];
 			return;
 		}
 		const store = this.findStore( route.opcTarget, route.node.toJson() );
@@ -69,7 +69,7 @@ export class OpcStore{
 				if( parentRef instanceof types.Reference )
 					route.parent = new DocItem( {path: route.opcTarget, queryParams: parentRef.node.toJson(), title: parentRef.browseName.name.toString()} );
 				else if( parentRef.id == types.ENodes.ObjectsFolder ){
-					let opcServer = this.#opcServerRoutes?.find( (r)=>r.path==route.opcTarget );
+					let opcServer = this.#opcClientRoutes?.find( (r)=>r.path==route.opcTarget );
 					route.parent = new DocItem( {path: route.opcTarget, title: opcServer ? opcServer.title : route.opcTarget} );
 				}
 				route.siblings = [];
@@ -83,6 +83,6 @@ export class OpcStore{
 		}
 	}
 
-	#opcServerRoutes: DocItem[];
-	#opcServers:Map<OpcServerTarget, Map<NodeId,StoreNode>> = new Map<OpcServerTarget, Map<NodeId,StoreNode>>();
+	#opcClientRoutes: DocItem[];
+	#opcClients:Map<OpcServerTarget, Map<NodeId,StoreNode>> = new Map<OpcServerTarget, Map<NodeId,StoreNode>>();
 }

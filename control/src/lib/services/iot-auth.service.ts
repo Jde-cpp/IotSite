@@ -12,8 +12,8 @@ export class IotAuthService implements IAuth{
 		return this.app.googleAuthClientId();
 	}
 
-	async loginGoogle( user:LoggedInUser ):Promise<void>{
-		let promise = await this.app.loginGoogle( user );
+	async login( user:LoggedInUser ):Promise<void>{
+		let promise = await this.app.login( user );
 		this.isOpc.set( false );
 		return promise;
 	}

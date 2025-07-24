@@ -84,11 +84,11 @@ export const routes: Routes = [
 				resolve: {data : QLListResolver},
 				canActivate: [AuthGuard],
 				data: { collections: [
-					{ path:"opcServers", title: "OPC Servers", data:{summary: "Change Configured OPC Servers", collectionName: "servers"} },
+					{ path:"opcClients", title: "OPC Clients", data:{summary: "Change OPC Clients on Gateway", collectionName: "clients"} },
 				]}
 			},
 			{
-				path: 'opcServers/:target',
+				path: 'opcClients/:target',
 				component: GatewayDetail,
 				providers: [ DetailResolver<OpcServer>, iotProvider ],
 				canActivate: [AuthGuard],

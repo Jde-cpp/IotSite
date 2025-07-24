@@ -10,7 +10,7 @@ import { Error } from '../model/Error';
 
 import * as IotCommon from '../proto/Opc.Common'; import Common = IotCommon.Jde.Opc.Proto;
 import * as IotRequests from '../proto/Opc.FromClient'; import FromClient = IotRequests.Jde.Opc.FromClient;
-import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotResults.Jde.Opc.FromServer;
+import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotResults.Jde.Opc.Gateway.FromServer;
 import { OpcStore } from './opc-store';
 import { NodeRoute } from '../model/NodeRoute';
 

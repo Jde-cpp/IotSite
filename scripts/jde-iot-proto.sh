@@ -17,11 +17,13 @@ moveToDir proto;
 #if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then commonFiles[Common]=common_root; fi;
 #create $jdeBash/Public/libs/app/shared/proto commonFiles;
 
+declare -A appFiles;
+if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then appFiles[Common]=common_root; fi;
+create $jdeBash/Public/libs/app/shared/proto appFiles;
 declare -A opcFiles;
-if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then opcFiles[Common]=common_root; fi;
 if [ ! -f Opc.Common.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.Common]=opc_common_root; fi;
 if [ ! -f Opc.FromServer.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.FromServer]=opc_from_server_root; fi;
 if [ ! -f Opc.FromClient.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.FromClient]=opc_from_client_root; fi;
-create $jdeBash/Public/libs/opc/src/types/proto opcFiles;
+create $jdeBash/Public/apps/OpcGateway/src/types/proto opcFiles;
 
 popd > /dev/null;

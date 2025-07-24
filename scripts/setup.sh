@@ -16,9 +16,7 @@ echo $baseWebDir;
 cmd="../WebFramework/scripts/create-workspace.sh my-workspace $baseWebDir/MaterialSite $baseWebDir/WebFramework $JDE_DIR/Public/web/access $baseWebDir/IotSite";
 echo $cmd
 $cmd; if [ $? -ne 0 ]; then echo `pwd`; echo $cmd; exit 1; fi;
-echo `pwd`;
 cd my-workspace;
-ng build --output-hashing=none --source-map=true;
 
 cd src;
 sitePath=`realpath $scriptDir/../site`;
@@ -41,3 +39,5 @@ addHard environment.service.ts $sitePath/app/services;
 cd ../..;
 moveToDir environments;
 addHard environment.ts $sitePath/environments;
+echo ------------------- Starting Build -------------------;
+ng build --output-hashing=none --source-map=true;
