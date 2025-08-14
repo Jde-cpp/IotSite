@@ -1,20 +1,20 @@
 import { cloneClassArray, ITargetRow, Mutation, MutationType, TargetRow } from "jde-framework";
 
-export type OpcServerPK = number;
-export type OpcServerTarget = string;
-export class OpcServer extends TargetRow<OpcServer>{
+export type CnnctnPK = number;
+export type CnnctnTarget = string;
+export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 	constructor( obj:any ){
-		super(OpcServer.typeName, obj);
+		super(ServerCnnctn.typeName, obj);
 		this.url = obj.url;
 		this.certificateUri = obj.certificateUri;
 	}
 
 	override equals( row:ITargetRow ):boolean{
-		let other = row as OpcServer;
+		let other = row as ServerCnnctn;
 		return super.equals(row) && this.url==other.url && this.certificateUri==other.certificateUri;
 	}
 
-	override mutation( original:OpcServer ):Mutation[]{
+	override mutation( original:ServerCnnctn ):Mutation[]{
 		console.assert( this.canSave );
 		let args = super.mutationArgs( original );
 		if( this.url!=original?.url )
@@ -25,8 +25,8 @@ export class OpcServer extends TargetRow<OpcServer>{
 	}
 
 
-	get properties():OpcServer{ let properties = new OpcServer(this); return properties; }
+	get properties():ServerCnnctn{ let properties = new ServerCnnctn(this); return properties; }
 	url:string;
 	certificateUri:string;
-	static typeName = "OpcServer";
+	static typeName = "ServerConnection";
 }
