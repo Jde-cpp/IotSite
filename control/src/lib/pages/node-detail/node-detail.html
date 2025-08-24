@@ -9,16 +9,17 @@
 				<mat-header-cell *matHeaderCellDef>
 					<mat-checkbox (change)="$event ? toggleAllRows() : null"
 												[checked]=isAllSelected()
+												[disabled]=!variables.length
 												[indeterminate]="selections.selected.length>0 && !isAllSelected()"
 												[aria-label]=checkboxLabel()>
 					</mat-checkbox>
 				</mat-header-cell>
-				<mat-cell *matCellDef="let row">
+				<mat-cell *matCellDef="let node">
 					<mat-checkbox (click)=$event.stopPropagation()
-												(change)=selections.toggle(row)
-												[checked]=selections.isSelected(row)
-												[disabled]=row.isFolderType
-												[aria-label]=checkboxLabel(row)>
+												(change)=selections.toggle(node)
+												[checked]=selections.isSelected(node)
+												[disabled]=!node.isVariable
+												[aria-label]=checkboxLabel(node)>
 					</mat-checkbox>
 				</mat-cell>
 			</ng-container>
@@ -29,18 +30,13 @@
 			<ng-container matColumnDef="name">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Name </mat-header-cell>
 				<mat-cell mat-cell *matCellDef="let r">
-					@if(r.nodeId.id==node.nodeId.id){
-						<span>{{r.displayName.text}}</span>
-					}
-					@else{
-						<a [routerLink]="routerLink(r)" routerLinkActive="router-link-active" >{{r.displayName.text}}</a>
-				}
+					<a [routerLink]="routerLink(r)" routerLinkActive="router-link-active" >{{r.name}}</a>
 				</mat-cell>
 			</ng-container>
-			<ng-container matColumnDef="class">
+			<!-- <ng-container matColumnDef="class">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Class </mat-header-cell>
 				<mat-cell mat-cell *matCellDef="let r">{{toObject[r.nodeClass]}}</mat-cell>
-			</ng-container>
+			</ng-container> -->
 			<ng-container matColumnDef="snapshot">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Snapshot </mat-header-cell>
 				<mat-cell mat-cell *matCellDef="let r">

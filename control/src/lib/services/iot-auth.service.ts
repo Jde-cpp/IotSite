@@ -1,7 +1,7 @@
 import { Inject, Injectable, computed, signal } from '@angular/core';
-import { AppService } from 'jde-framework';
+import { AppService, Log } from 'jde-framework';
 import { GatewayService } from './gateway.service';
-import { EProvider, IAuth, LoggedInUser } from 'jde-material';
+import { EProvider, IAuth, User } from 'jde-material';
 
 @Injectable()
 export class IotAuthService implements IAuth{
@@ -9,29 +9,29 @@ export class IotAuthService implements IAuth{
 	{}
 
 	googleAuthClientId(): Promise<string> {
-		return this.app.googleAuthClientId();
+		return this.app.googleAuthClientId( (m)=>console.log(m) );
 	}
 
-	async login( user:LoggedInUser ):Promise<void>{
+	async login( user:User ):Promise<void>{
 		let promise = await this.app.login( user );
 		this.isOpc.set( false );
 		return promise;
 	}
-	providers():Promise<EProvider[]>{ return this.app.providers(); }
+	providers( log:Log ):Promise<EProvider[]>{ return this.app.providers( log ); }
 	validateSessionId():void{ this.app.validateSessionId(); }
 
-	async logout():Promise<void>{
+	async logout( log:Log ):Promise<void>{
 		let promise;
 		if( this.isOpc() )
-			promise = await this.gatewayService.defaultGateway.logout();
+			promise = await this.gatewayService.defaultGateway.logout( log );
 		else
-			promise = await this.app.logout();
+			promise = await this.app.logout( log );
 		this.isOpc.set( null );
 		return promise;
 	}
-	async loginPassword( domain:string, username:string, password:string ):Promise<void>{
+	async loginPassword( domain:string, username:string, password:string, log:Log ):Promise<void>{
 		//let gateway = await	 this.gatewayService.instance( domain );
-		let promise = await this.gatewayService.defaultGateway.login( domain, username, password );
+		let promise = await this.gatewayService.defaultGateway.login( domain, username, password, log );
 		this.isOpc.set( true );
 		return promise;
 	}

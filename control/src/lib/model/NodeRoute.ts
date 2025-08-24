@@ -1,12 +1,11 @@
 import { DocItem } from "jde-material";
 import * as types from './types';
 import {NodeId} from './NodeId';
-//import { ServerCnnctnTarget } from "./ServerCnnctn";
 import { ActivatedRouteSnapshot, Params } from "@angular/router";
 import { Sort } from "@angular/material/sort";
 import { IProfile, Settings } from "jde-framework";
 import { OpcStore } from "../services/opc-store";
-import { UaNode } from "./Node";
+import { OpcObject, UaNode } from "./Node";
 import { Inject } from "@angular/core";
 
 export class NodeRoute extends DocItem{
@@ -16,7 +15,7 @@ export class NodeRoute extends DocItem{
 		this.gatewayTarget = paramsRoute?.paramMap.get("host");
 		this.cnnctnTarget = paramsRoute?.paramMap.get("connection");
 		this.route = activatedRoute.pathFromRoot[activatedRoute.pathFromRoot.length-1];
-		this.node = this.browsePath.length ? opcStore.findNodeId( this.gatewayTarget, this.cnnctnTarget, this.browsePath ) :  UaNode.rootNode;
+		this.node = this.browsePath.length ? opcStore.findNodeId( this.gatewayTarget, this.cnnctnTarget, this.browsePath ) : OpcObject.rootNode;
 		this.settings = new Settings<UserProfile>( UserProfile, this.profileKey, profileService );
 	}
 
@@ -28,7 +27,7 @@ export class NodeRoute extends DocItem{
 	override get queryParams():Params{ return this.route.queryParams; }
 	collectionName=null;
 	node: UaNode;
-	get nodeId():NodeId{ return this.node?.nodeId; }
+	get nodeId():NodeId{ return this.node; }
 	get browsePath():string{
 		return this.route.url.map(seg=>seg.path).join("/");
 	}
@@ -36,14 +35,13 @@ export class NodeRoute extends DocItem{
 	get profile():UserProfile{ return this.settings.value };
 	settings:Settings<UserProfile>;
 	children: DocItem[];
-	//get cnnctnTarget():ServerCnnctnTarget{ return this.route.paramMap.get("target"); }
 	cnnctnTarget:string;
 	gatewayTarget:string;
 }
 export class UserProfile{
 	assign( value:UserProfile ){ this.sort = value.sort; this.columns = value.columns; this.visibleColumns=value.visibleColumns; }
 	sort:Sort = {active: "name", direction: "asc"};
-	visibleColumns:string[] = ['select', 'id', 'name', 'class', 'snapshot'];
-	columns:string[] = ['select', 'id', 'name', 'class', 'snapshot'];
+	visibleColumns:string[] = ['select', 'id', 'name', 'snapshot'];
+	columns:string[] = ['select', 'id', 'name', 'snapshot'];
 	subscriptions:NodeId[] = [];
 }

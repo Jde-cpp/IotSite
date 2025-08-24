@@ -3,10 +3,10 @@ import { Log, Instance, ProtoService, AppService, AuthStore, ETransport } from '
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
 import { IErrorService } from 'jde-framework';
-import { EProvider, IAuth, LoggedInUser } from 'jde-material';
+import { EProvider, IAuth, User } from 'jde-material';
 
-import * as types from '../model/types';
-import { Error } from '../model/Error';
+
+import { OpcError } from '../model/OpcError';
 
 import * as IotCommon from '../proto/Opc.Common'; import Common = IotCommon.Jde.Opc.Proto;
 import * as IotRequests from '../proto/Opc.FromClient'; import FromClient = IotRequests.Jde.Opc.FromClient;
@@ -14,8 +14,9 @@ import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotRe
 import { OpcStore } from './opc-store';
 import { NodeRoute } from '../model/NodeRoute';
 import { CnnctnTarget } from "../model/ServerCnnctn";
-import { Guid, NodeId } from '../model/NodeId';
-import { UaNode } from '../model/Node';
+import { Guid, NodeKey, NodeId } from '../model/NodeId';
+import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/Node';
+import { OpcId } from '../model/types';
 import { ExNodeId } from '../model/ExNodeId';
 import { Duration, Timestamp, toValue, Value } from '../model/Value';
 
@@ -77,19 +78,19 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [instance];
 	}
-	async login( domain:string, username:string, password:string ):Promise<void>{
+	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
 		let self = this;
 		if( this.log.restRequests )	console.log( `Login( opc='${domain}', username='${username}' )` );
 		try{
-			await this.logout();
-			const result = await this.postRaw<any>( 'login', {opc:domain, user:username, password:password}, true );//TODO also log out on server side.
-			if( this.log.restResults ) console.log( `authorization='${JSON.stringify(result)}'` );
-			let user:LoggedInUser = {
-				id: domain ? `${domain}\\${username}` : username,
-				domain: domain,
-				name: username,
-				provider: EProvider.OpcServer
-			};
+			await this.logout( log );
+			console.assert( !this.user()?.authorization );
+			await this.postRaw<any>( 'login', {opc:domain, user:username, password:password}, true, null );
+			if( this.log.restResults ) console.log( `authorization: '${this.user()?.authorization}'` );
+			let user = new User();
+			user.id = domain ? `${domain}\\${username}` : username;
+			user.domain = domain;
+			user.name = username;
+			user.provider = EProvider.OpcServer;
 			this.authStore.append( user );
 		}
 		catch( e ){
@@ -97,12 +98,17 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		}
 	}
 
-	async logout():Promise<void>{
+	async logout( log:Log ):Promise<void>{
 		let self = this;
 		if( this.log.restRequests )	console.log( `logout()` );
-		await this.post<string>( 'logout', {} );
+		try{
+			await this.postRaw<string>( 'logout', {}, false, {} );
+			if( this.log.restResults ) console.log( `logout` );
+		}
+		catch( e ){
+			log( `logout failed:  ${e["message"] ?? "Unknown error"}` );
+		}
 		this.authStore.logout();
-		if( this.log.restResults ) console.log( `logout` );
 	}
 
 	protected encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
@@ -193,17 +199,23 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 
 	private async updateErrorCodes(){
-		const scs = Error.emptyMessages();
+		const scs = OpcError.emptyMessages();
 		if( scs.length ){
 			const json = await super.get( `ErrorCodes?scs=${scs.join(',')}` );
-			Error.setMessages( json["errorCodes"] );
+			OpcError.setMessages( json["errorCodes"] );
 		}
 	}
 	public async browseObjectsFolder( cnnctn:CnnctnTarget, node:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
 		const json = await super.get( `browseObjectsFolder?opc=${cnnctn}&${Gateway.toParams(node.nodeId.toJson())}&snapshot=${snapshot}`, log );
-		var y = [];
-		for( const ref of json["refs"] )
-			y.push( new UaNode(ref) );
+		var y = new Array<UaNode>();
+		for( const ref of json["refs"] ){
+			switch( <ENodeClass>ref.nodeClass ){
+				case ENodeClass.Object: y.push( new OpcObject(ref) ); break;
+				case ENodeClass.ObjectType: node.typeDef = new ObjectType(ref); break; //y.push( new ObjectType(ref) ); break;
+				case ENodeClass.Variable: y.push( new Variable(ref) ); break;
+				default: debugger;
+			}
+		}
 		this.store.setNodes( this.target, cnnctn, node, y );
 		this.updateErrorCodes();
 		return y;
@@ -222,7 +234,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const valueArgs = encodeURIComponent( JSON.stringify([v]) );
 		const json = await super.get( `write?opc=${opcId}&nodes=${nodeArgs}&values=${valueArgs}` );
 		if( json["snapshots"][0].sc ){
-			const e:Error = new Error( json["snapshots"][0].sc[0] );
+			const e = new OpcError( json["snapshots"][0].sc[0], "Write", new Error().stack, null );
 			this.updateErrorCodes();
 			throw e;
 		}
@@ -242,7 +254,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this._callbacks.get( requestId ).resolve( ack.results );
 	}
 
-	private async _subscribe( opcId:types.OpcId, nodes:NodeId[], subject:Subject<SubscriptionResult> ):Promise<void>{
+	private async _subscribe( opcId:OpcId, nodes:NodeId[], subject:Subject<SubscriptionResult> ):Promise<void>{
 		const request:FromClient.ISubscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
 		let toDelete = new Array<NodeId>();
 		try{
@@ -251,7 +263,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 				const node = nodes[i];
 				if( y[i].statusCode ){
 					toDelete.push( node );
-					let e = new Error( y[i].statusCode );
+					let e = new OpcError( y[i].statusCode, "Subscribe", new Error().stack, null );
 					console.log( `Subscription failed for '${node} - ${e}` );
 				}
 		 	}
@@ -265,9 +277,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 
 	#ownerSubscriptions = new Map<Owner,Subject<SubscriptionResult>>();
-	#subscriptions = new Map<types.OpcId,Map<types.NodeKey, Owner[]>>();
-	getOpcSubscriptions(opcId:types.OpcId):Map<types.NodeKey, Owner[]>{ return this.#subscriptions.has( opcId ) ? this.#subscriptions.get( opcId ) : this.#subscriptions.set( opcId, new Map<types.NodeKey, Owner[]> ).get( opcId ); }
-	#nodes = new Map<types.NodeKey, NodeId>();
+	#subscriptions = new Map<OpcId,Map<NodeKey, Owner[]>>();
+	getOpcSubscriptions(opcId:OpcId):Map<NodeKey, Owner[]>{ return this.#subscriptions.has( opcId ) ? this.#subscriptions.get( opcId ) : this.#subscriptions.set( opcId, new Map<NodeKey, Owner[]> ).get( opcId ); }
+	#nodes = new Map<NodeKey, NodeId>();
 	private clearUnusedNodes(){
 		this.#nodes.forEach( (_, key)=>{
 			const keys = [...this.#subscriptions.entries()].filter( ({1:value})=>value.has(key) ).map( ([key])=>key );
@@ -275,7 +287,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 				this.#nodes.delete(key);
 		});
 	}
-	public addToSubscription( opcId:types.OpcId, nodes:NodeId[], owner:Owner ){
+	public addToSubscription( opcId:OpcId, nodes:NodeId[], owner:Owner ){
 		let opcSubscriptions = this.getOpcSubscriptions( opcId );
 		for( const node of nodes ){
 			let owners:Owner[];
@@ -292,7 +304,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		let subject = this.#ownerSubscriptions.has( owner ) ? this.#ownerSubscriptions.get( owner ) : this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() ).get( owner );
 		this._subscribe( opcId, nodes, subject );
 	}
-	subscribe( opcId:types.OpcId, nodes:NodeId[], owner:Owner ):Observable<SubscriptionResult>{
+	subscribe( opcId:OpcId, nodes:NodeId[], owner:Owner ):Observable<SubscriptionResult>{
 		this.addToSubscription( opcId, nodes, owner );
 		let subject = this.#ownerSubscriptions.get( owner );
 		return subject.pipe(
@@ -361,7 +373,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner).next({opcId:nodeValues.opcId, node:node, value:Gateway.toValues(nodeValues.values)}) );
 	};
 
-	private clearOwnerNode( opcSubscriptions:Map<types.NodeKey, Owner[]>,  key:types.NodeKey, owner:Owner ){
+	private clearOwnerNode( opcSubscriptions:Map<NodeKey, Owner[]>,  key:NodeKey, owner:Owner ){
 		let owners = opcSubscriptions.get( key );
 		const index = owners.indexOf( owner );
 		let tombStone = false;
@@ -376,14 +388,14 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	// remove all subscriptions for owner.
 	private clearOwner( owner:Owner ){
 		this.#ownerSubscriptions.delete( owner );
-		let toDeleteKeys = new Map<types.OpcId,types.NodeKey[]>();
+		let toDeleteKeys = new Map<OpcId,NodeKey[]>();
 		for( const [opcId, opcSubscriptions] of this.#subscriptions.entries() ){
 			for( const nodeKey of opcSubscriptions.keys() ){
 				if( this.clearOwnerNode(opcSubscriptions, nodeKey, owner) )
 				toDeleteKeys.has(opcId) ? toDeleteKeys.get(opcId).push(nodeKey) : toDeleteKeys.set( opcId, [nodeKey] );
 			}
 		}
-		let toDeleteNodes = new Map<types.OpcId,NodeId[]>();
+		let toDeleteNodes = new Map<OpcId,NodeId[]>();
 		for( const [opcId,keys] of toDeleteKeys ){
 			let nodes = toDeleteNodes.set( opcId, [] ).get( opcId );
 			keys.forEach( key=>nodes.push( this.#nodes.get(key) ) );

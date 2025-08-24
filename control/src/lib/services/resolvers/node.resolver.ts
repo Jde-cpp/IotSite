@@ -2,8 +2,7 @@ import { Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, ActivatedRouteSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { IErrorService, IProfile, Settings, TableSchema } from 'jde-framework';
 import { GatewayService } from '../gateway.service';
-import * as types from '../../model/types';
-import { UaNode } from '../../model/Node';
+import { ENodeClass, UaNode } from '../../model/Node';
 import { NodeRoute, UserProfile } from '../../model/NodeRoute';
 import { OpcStore } from '../opc-store';
 
@@ -27,14 +26,11 @@ export class NodeResolver implements Resolve<NodePageData> {
 			await route.settings.loadedPromise;//this.route.snapshot.children[0].paramMap.get('host')
 			let gateway = await this.gatewayService.instance( route.gatewayTarget );
 			let references = await gateway.browseObjectsFolder( route.cnnctnTarget, route.node, true, (m)=>console.log(m) );
-			let displayed = references.filter( (r)=>
-				r.nodeClass==types.ENodeClass.Variable ||
-				( r.nodeClass==types.ENodeClass.Object && r.nodeId.id!=types.ENodes.Server )
-			);
-			gateway.setRoute( route );
+			let displayed = references.filter( (r)=>r.displayed );
+			this.opcStore.setRoute( route );
 			return { route: route, nodes: displayed };
 		}catch( e ){
-			this.snackbar.error( `Not found:  '${route.cnnctnTarget}/${route.nodeId?.toQueryParams()}'`, e, (m)=>console.log(m) );
+			this.snackbar.exceptionInfo( e, `Not found:  '${route.cnnctnTarget}'`, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 			return null;
 		}
@@ -42,5 +38,4 @@ export class NodeResolver implements Resolve<NodePageData> {
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<NodePageData>{
 		return this.load( new NodeRoute(route, this.profileService, this.opcStore) );
 	}
-	//get gateway(){ return this.gatewayService.defaultGateway; }
 }

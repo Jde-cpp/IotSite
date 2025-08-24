@@ -1,18 +1,8 @@
 import Long from "long";
 import {Guid, NodeId, INodeId, NodeIdJson} from "./NodeId";
-import { ExNodeId, IExNodeId, ExNodeIdJson } from "./ExNodeId";
 import { Timestamp, Value } from "./Value";
 
-export function toBinary( x:string ):Uint8Array{  return Uint8Array.from( atob(x), c => c.charCodeAt(0) ); }
-
 export type OpcId = string;
-export type NodeKey = Symbol;
-
-export enum ENodes{
-	ObjectsFolder = 85, /* Object */
-	Server = 2253
-}
-
 
 export interface ILocalizedText{
 	locale: string;
@@ -24,16 +14,11 @@ export interface IBrowseName{
 	name:String;
 }
 
-export enum ENodeClass{
-  Unspecified = 0,
-  Object = 1,
-  Variable = 2,
-  Method = 4,
-  ObjectType = 8,
-  VariableType = 16,
-  ReferenceType = 32,
-  DataType = 64,
-  nodeClassView = 128,
+export enum EReferenceType{
+  Organizes = 35,
+	HasModelingRule = 37,
+	HasSubType = 45,
+	HasComponent = 47
 }
 export enum ETypes{
 	None = 0,

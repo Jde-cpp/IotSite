@@ -1,7 +1,5 @@
 export * from './lib/jde-iot.module';
 
-export * from './lib/model/types';
-export * from './lib/model/ServerCnnctn';
 export {GatewayDetail} from './lib/pages/client-detail/client-detail';
 export {IotAuthService} from './lib/services/iot-auth.service';
 export {GatewayService} from './lib/services/gateway.service';

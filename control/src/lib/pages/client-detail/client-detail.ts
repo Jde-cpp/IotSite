@@ -56,7 +56,7 @@ export class GatewayDetail implements OnDestroy, OnInit{
 			await this.gateway.mutation( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.error( "Save failed.", e, (m)=>console.log(m) );
+			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
 		}
 	}
 	public onCancelClick(){

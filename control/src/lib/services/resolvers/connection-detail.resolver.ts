@@ -31,7 +31,7 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 			return CnnctnDetailResolver.load( this.ql, "serverConnections", target, profile, routing );
 		}
 		catch( e ){
-			this.snackbar.error( `Target not found:  '${target}'`, null, (m)=>console.log(`${m} - ${e.toString()}`) );
+			this.snackbar.exceptionInfo( e, `Target not found:  '${target}'`, (m)=>console.log(`${m} - ${e.toString()}`) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 			return null;
 		}
@@ -41,9 +41,9 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection("serverConnections"), (m)=>console.log(m) );
 		let obj = {};
 		if( target!="$new" ){
-			obj = await ql.querySingle( ql.targetQuery(schema, target, profile.value.showDeleted) );
+			obj = await ql.querySingle( ql.targetQuery(schema, target, profile.value.showDeleted), (m)=>console.log(m) );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
-				const subRows = await ql.query<any>( query );
+				const subRows = await ql.query<any>( query, (m)=>console.log(m) );
 				let [property, propValue] = Object.entries(subRows)[0];
 				if( !obj[property] )
 					obj[property] = [...<[]>propValue];
