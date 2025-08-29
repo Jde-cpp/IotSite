@@ -3,17 +3,18 @@ import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} f
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
-import { IotService, SubscriptionResult } from '../../services/iot.service';
+import { GatewayService, SubscriptionResult } from '../../services/gateway.service';
 import { IErrorService, IProfile, subscribe} from 'jde-framework'
-import * as types from '../../model/types';
+import { ETypes } from '../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
-import { Error } from '../../model/Error';
 import { IEnvironment } from 'jde-material';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { NodePageData } from '../../services/node.resolver';
+import { NodePageData } from '../../services/resolvers/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
-import { OpcNodeRouteService } from '../../services/opc-node-route.service';
+import { OpcNodeRouteService } from '../../services/routes/opc-node-route.service';
+import { Value, toString } from '../../model/Value';
+import { ENodeClass, Variable, UaNode }  from '../../model/Node';
 
 @Component({
   selector: 'node-detail',
@@ -23,7 +24,7 @@ import { OpcNodeRouteService } from '../../services/opc-node-route.service';
 		imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatTableModule,MatToolbarModule]
 })
 export class NodeDetail implements OnInit, OnDestroy {
-	constructor( @Inject('IotService') private _iot:IotService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IEnvironment') private environment: IEnvironment, @Inject('IErrorService') private snackbar: IErrorService )
+	constructor( @Inject('GatewayService') private gatewayService:GatewayService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IEnvironment') private environment: IEnvironment, @Inject('IErrorService') private snackbar: IErrorService )
 	{}
 
 	async ngOnInit() {
@@ -31,8 +32,9 @@ export class NodeDetail implements OnInit, OnDestroy {
 		this.route.data.subscribe( (data)=>{
 			this.pageData = data["pageData"];
 			this.sideNav.set( this.pageData.route );
-			this.references?.filter((r)=>this.profile.subscriptions.find((s)=>s.equals(r.node))).forEach((r)=>this.selections.select(r));
+			this.nodes?.filter((n:UaNode)=>this.profile.subscriptions.find((s)=>s.equals(n))).forEach((n)=>this.selections.select(n));
 			this.isLoading.set( false );
+
 		});
 		this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
 	}
@@ -46,57 +48,56 @@ export class NodeDetail implements OnInit, OnDestroy {
 
 	async retrieveSnapshot(){
 		this.retrievingSnapshot.set( true );
-		this.references.forEach( r=>r.value=null );
-		var nodes = this.references.map( r=>r.node );
-		var snapshots = await this._iot.snapshot( this.opcTarget, nodes );
+		this.variables.forEach( r=>r.value=null );
+		var snapshots = await this._iot.snapshot( this.cnnctnTarget, this.variables );
 		for( let [node,value] of snapshots ){
-			var ref = this.references.find( (n)=>n.node.equals(node) );
-			if( ref )
-				ref.value = value;
+			let variable = this.variables.find( (n)=>n.equals(node) );
+			if( variable )
+				variable.value = value;
 		}
 		this.retrievingSnapshot.set( false );
 	}
 
-	toObject( x:types.ENodeClass ):string{ return types.ENodeClass[x]; }
-	toString( value:types.Value ){ return types.toString(value); }
-  checkboxLabel(row?: types.Reference): string {
+	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
+	toString( value:Value ){ return toString(value); }
+  checkboxLabel(row?: UaNode): string {
 		return row
-			? `${this.selections.isSelected(row) ? 'deselect' : 'select'} ${row.displayName}`
+			? `${this.selections.isSelected(row) ? 'deselect' : 'select'} ${row.name}`
 			: `${this.isAllSelected() ? 'select' : 'deselect'} all`;
   }
-	async onSubscriptionChange( r:SelectionChange<types.Reference> ){
+	async onSubscriptionChange( r:SelectionChange<UaNode> ){
 		if( r.added.length>0 ){
 			try {
-				let nodes = r.added.map( r=>r.node );
+				let nodes = r.added.map( r=>r.nodeId );
 				this.profile.subscriptions.push( ...nodes );
 				if( !this.subscription){
-					this.subscription = this._iot.subscribe( this.opcTarget, nodes, this.Key ).subscribe({
+					this.subscription = this._iot.subscribe( this.cnnctnTarget, nodes, this.Key ).subscribe({
 						next:(value: SubscriptionResult) =>{
-							this.references.find( (r)=>r.node.equals(value.node) ).value = value.value;
+							this.variables.find( (r)=>r.nodeId.equals(value.node) ).value = value.value;
 						},
-						error:(error: Error) =>{
-							this.snackbar.error( error.message );
+						error:(e: Error) =>{
+							this.snackbar.exception( e, (m)=>console.log(m) );
 						},
 						complete:()=>{ console.debug( "complete" );}
 					});
 				}
 				else
-					this._iot.addToSubscription( this.opcTarget, nodes, this.Key );
+					this._iot.addToSubscription( this.cnnctnTarget, nodes, this.Key );
 			} catch (e) {
-				this.snackbar.error( e["error"]["message"] );
+				this.snackbar.error( e["error"], (m)=>console.log(m) );
 			}
 		}
 		if( r.removed.length>0 ){
-			let nodes = r.removed.map( r=>r.node );
+			let nodes = r.removed.map( r=>r.nodeId );
 			this.profile.subscriptions = this.profile.subscriptions.filter( s=>!nodes.includes(s) );
 			if( !this.selections.selected.length )
 				this.subscription = null;
 			else{
 				try{
-					this._iot.unsubscribe( this.opcTarget, nodes, this.Key );
+					this._iot.unsubscribe( this.cnnctnTarget, nodes, this.Key );
 				}
 				catch (e) {
-					this.snackbar.error( e["error"]["message"] );
+					this.snackbar.error( e["error"], (m)=>console.log(m) );
 				}
 			}
 		}
@@ -106,50 +107,57 @@ export class NodeDetail implements OnInit, OnDestroy {
 		if( this.isAllSelected() )
 			this.selections.clear();
 		else
-			this.selections.select(...this.references);
+			this.selections.select(...this.nodes);
   }
 
-	async toggleValue( e:MatCheckboxChange, x:types.Reference ){
+	async toggleValue( e:MatCheckboxChange, x:Variable ){
 		e.source.checked = !e.source.checked;
 		try {
-			x.value = await this._iot.write( this.opcTarget, x.node, !x.value );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value );
 		}
 		catch (e) {
-			this.snackbar.show( e["message"] );
+			this.snackbar.exception( e, (m)=>console.log(m) );
 		}
 	}
-	async changeDouble( e:Event, x:types.Reference ){
+	async changeDouble( e:Event, x:Variable ){
 		try {
-			x.value = await this._iot.write( this.opcTarget, x.node, +e.target["value"] );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"] );
 		}
 		catch (e) {
-			this.snackbar.show( e["message"] );
+			this.snackbar.exception( e, (m)=>console.log(m) );
 		}
 	}
-	async changeString( e:Event, x:types.Reference ){
+	async changeString( e:Event, n:Variable ){
 		try {
-			x.value = await this._iot.write( this.opcTarget, x.node, e.target["value"] );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"] );
 		}
-		catch (e) {
-			this.snackbar.show( e["message"] );
+		catch (err) {
+			e.target["value"] = n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
-	test(r:types.Reference){ debugger;}
+	routerLink(n:UaNode):string[]{
+		return [`./${n.browse}`];
+	}
+	test(r:UaNode){ debugger;}
 	get columns():string[]{ return this.profile.columns; }
-	ETypes = types.ETypes;
-	isAllSelected = computed<boolean>( ()=>{ return this.selections.selected.length==this.references.length; } );
+	ETypes = ETypes;
+	get _iot(){ return this.gatewayService.defaultGateway; }
+	isAllSelected = computed<boolean>( ()=>{ return this.selections.selected.length==this.nodes.length; } );
 	isLoading = signal<boolean>( true );
 	get Key():string{ return this.pageData.route.profileKey; }
-	get node(){ return this.sideNav().node; };
-	get ns():number{ return this.node.ns ? +this.node.ns : this.environment["defaultNS"]; }
-	get opcTarget():string{ return this.sideNav().opcTarget; }
+	get node(){ return this.sideNav().node; }
+	get nodeId(){ return this.node.nodeId; }
+	get ns():number{ return this.nodeId.ns ? +this.nodeId.ns : this.environment["defaultNS"]; }
+	get cnnctnTarget():string{ return this.sideNav().cnnctnTarget; }
 	pageData:NodePageData;
 	//get parent():types.ExpandedNode{ return this.pageData.parent; }
 	get profile(){ return this.pageData.route.profile; }
-	get references(){ if(!this.pageData) debugger; return this.pageData?.references; }
+	get nodes(){ if(!this.pageData) debugger; return this.pageData?.nodes; }
+	get variables():Variable[]{ return <Variable[]>this.nodes.filter((x)=>x.nodeClass==ENodeClass.Variable); }
 	retrievingSnapshot = signal<boolean>( false );
 	routerSubscription:Subscription;
-	selections = new SelectionModel<types.Reference>(true, []);
+	selections = new SelectionModel<UaNode>(true, []);
 	get showSnapshot():boolean{ return this.visibleColumns.includes("snapshot");}
 	//#sideNav = signal<NodeRoute>( null );
 	sideNav = model.required<NodeRoute>();

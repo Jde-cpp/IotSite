@@ -8,8 +8,8 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ComponentPageTitle } from 'jde-material';
 import { DetailResolverData, IErrorService, IGraphQL, IProfile, Properties} from 'jde-framework';
 
-import { OpcServer } from '../../model/OpcServer';
-import { IotService } from '../../services/iot.service';
+import { ServerCnnctn } from '../../model/ServerCnnctn';
+import { Gateway, GatewayService } from '../../services/gateway.service';
 
 @Component( {
 	selector: 'roles',
@@ -25,50 +25,53 @@ export class GatewayDetail implements OnDestroy, OnInit{
 				return;
 			if( !this.properties().canSave )
 				this.isChanged.set( false );
-			else if( !this.properties().equals(this.gateway.properties) )
+			else if( !this.properties().equals(this.serverCnnctn.properties) )
 				this.isChanged.set( true );
 		});
 		route.data.subscribe( (data)=>{
 			this.pageData = data["pageData"];
-			this.gateway = new OpcServer( this.pageData.row );
+			this.serverCnnctn = new ServerCnnctn( this.pageData.row );
 			this.pageData.row = null;
 
-			this.properties.set( this.gateway.properties );
+			this.properties.set( this.serverCnnctn.properties );
 		});
 	}
 	ngOnDestroy(){
 		this.profile.save();
 	}
 	async ngOnInit(){
+		const segments = this.router.url.split( "/" );
+		this.gateway = await this.gatewayService.instance( segments[segments.length-2] );
 		this.sideNav.set( this.pageData.routing );
 	}
 	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}
 
 	async onSubmitClick(){
 		try{
-			const upsert = new OpcServer( {
+			const upsert = new ServerCnnctn( {
 				id:this.properties().id,
 				...this.properties(),
 			});
-			const mutation = upsert.mutation( this.gateway );
-			await this.ql.mutation( mutation );
+			const mutation = upsert.mutation( this.serverCnnctn );
+			await this.gateway.mutation( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.error( "Save failed.", e );
+			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
 		}
 	}
 	public onCancelClick(){
 		this.router.navigate( ['..'], { relativeTo: this.route } );
 	}
 
-	gateway:OpcServer;
-	pageData:DetailResolverData<OpcServer>;
-	ctor:new (item: any) => any = OpcServer;
+	serverCnnctn:ServerCnnctn;
+	pageData:DetailResolverData<ServerCnnctn>;
+	ctor:new (item: any) => any = ServerCnnctn;
 	isChanged = signal<boolean>( false );
 	get profile(){ return this.pageData.pageSettings.profile;}
 
-	properties = signal<OpcServer>( null );
+	properties = signal<ServerCnnctn>( null );
 	get schema(){ return this.pageData.schema; }
 	sideNav = signal<any>( null );
-	ql:IGraphQL = inject( IotService );
+	gatewayService:GatewayService = inject( GatewayService );
+	gateway:Gateway;
 }

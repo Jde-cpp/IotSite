@@ -1,88 +1,103 @@
 import { Injectable } from "@angular/core";
-import { OpcServerTarget } from "../model/OpcServer";
-import * as types from '../model/types';
+import { CnnctnTarget } from "../model/ServerCnnctn";
+import { ETypes } from '../model/types';
 import { NodeRoute } from "../model/NodeRoute";
+import { OpcObject, UaNode } from "../model/Node";
+import { NodeId, NodeKey } from "../model/NodeId";
 import { DocItem } from "jde-material";
+import { GatewayTarget } from "./gateway.service";
 
 class StoreNode{
-	constructor( node:types.Reference|types.ExpandedNode ){
-		this.ref = node;
+	constructor( node:UaNode ){
+		this.node = node;
 	}
-	parent:types.Node;
-	ref:types.Reference|types.ExpandedNode;
-	children:types.NodeJson[] = [];
+	parentId:NodeId;
+	node:UaNode;
+	children:UaNode[] = [];
 }
 
-type NodeId = string; //stringify(NodeJson)
 @Injectable({providedIn: 'root'})
 export class OpcStore{
 	constructor(){
 		console.log( `OpcStore::OpcStore` );
 	}
-	private getNodes( opcId:OpcServerTarget ):Map<NodeId,StoreNode>{
-		let nodes = this.#opcClients.get( opcId );
+	private getNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget ):Map<NodeKey,StoreNode>{
+		let gatewayNodes = this.#nodes.get( gateway );
+		if( !gatewayNodes )
+			this.#nodes.set( gateway, gatewayNodes = new Map<CnnctnTarget, Map<NodeKey,StoreNode>>() );
+		let nodes = gatewayNodes.get( cnnctn );
 		if( !nodes )
-			this.#opcClients.set( opcId, nodes = new Map<NodeId,StoreNode>() );
+			gatewayNodes.set( cnnctn, nodes = new Map<NodeKey,StoreNode>() );
 		return nodes;
 	}
-	private findStore( opcTarget:OpcServerTarget, node:types.NodeJson ):StoreNode{
-		let opcNodes = this.#opcClients.get( opcTarget );
+	private findStore( gateway:GatewayTarget, cnnctn:CnnctnTarget, node:NodeId ):StoreNode{
+		const opcNodes = this.#nodes.get( gateway )?.get( cnnctn );
 		let store:StoreNode;
 		if( opcNodes )
-			store = opcNodes.get( JSON.stringify(node) );
+			store = opcNodes.get( node.key );
 		return store;
 	}
-	private getStore( nodes:Map<NodeId,StoreNode>, node:types.ExpandedNode ):StoreNode{
-		const key = JSON.stringify( node.toJson() );
-		let store = nodes.get( key );
+	private getStore( nodes:Map<NodeKey,StoreNode>, node:UaNode ):StoreNode{
+		let store = nodes.get( node.nodeId.key );
 		if( !store )
-			nodes.set( key, store = new StoreNode(node) );
+			nodes.set( node.nodeId.key, store = new StoreNode(node) );
 		return store;
 	}
-	setOpcClients( clients: DocItem[]) {
-		this.#opcClientRoutes = [...clients];
-		for( let route of this.#opcClientRoutes )
+	setServerCnnctns( clients: DocItem[] ){
+		this.#serverCnnctnRoutes = [...clients];
+		for( let route of this.#serverCnnctnRoutes )
 			route.path = route.path.substring( route.path.lastIndexOf("/")+1 );
 	}
 
-	setReferences( opcId:OpcServerTarget, node:types.ExpandedNode, children:types.Reference[] ){
-		let opcNodes = this.getNodes( opcId );
+	setNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget, node:UaNode, children:UaNode[] ){
+		let opcNodes = this.getNodes( gateway, cnnctn );
 		let store = this.getStore( opcNodes, node );
 		store.children = [];
 		for( let child of children ){
-			store.children.push( child.node.toJson() );
-			let childStore = this.getStore( opcNodes, child.node );
-			childStore.parent = node;
-			childStore.ref = child;
+			store.children.push( child );
+			let childStore = this.getStore( opcNodes, child );
+			childStore.parentId = node.nodeId;
+			childStore.node = child;
 		}
 	}
 	setRoute(route: NodeRoute) {
-		if( route.node.id == types.ENodes.ObjectsFolder ){
-			route.siblings = this.#opcClientRoutes ?? [new DocItem({title: route.opcTarget, path: route.opcTarget})];
+		if( route.node.equals(OpcObject.rootNode) ){
+			route.siblings = [new DocItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
 			return;
 		}
-		const store = this.findStore( route.opcTarget, route.node.toJson() );
-		if( store?.parent ){
-			const parentStore = this.findStore( route.opcTarget, store.parent.toJson() );
-			if( parentStore ){
-				const parentRef = parentStore.ref;
-				if( parentRef instanceof types.Reference )
-					route.parent = new DocItem( {path: route.opcTarget, queryParams: parentRef.node.toJson(), title: parentRef.browseName.name.toString()} );
-				else if( parentRef.id == types.ENodes.ObjectsFolder ){
-					let opcServer = this.#opcClientRoutes?.find( (r)=>r.path==route.opcTarget );
-					route.parent = new DocItem( {path: route.opcTarget, title: opcServer ? opcServer.title : route.opcTarget} );
-				}
-				route.siblings = [];
-				for( const sibling of parentStore.children ){
-					const siblingStore = new types.Node(sibling).equals( route.node ) ? store : this.findStore( route.opcTarget, sibling );
-					const siblingRef = siblingStore?.ref as types.Reference;
-					if( siblingRef instanceof types.Reference && siblingRef.node )
-						route.siblings.push( new DocItem( {path: route.opcTarget, queryParams: siblingRef.node.toJson(), title: siblingRef.browseName.name.toString()}) );
-				}
-			}
+		let findStore = (node:NodeId):StoreNode => { return node ? this.findStore( route.gatewayTarget, route.cnnctnTarget, node ) : null; };
+		const store = findStore( route.nodeId );
+		let parentPaths = [];
+		let parent = findStore( store?.parentId );
+		for( let current = parent; current && !current.node.equals(OpcObject.rootNode); current=findStore(current.parentId) ){
+			parentPaths.push( current.node.browse );
+		}
+		if( !parent )
+			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
+
+		route.parent = new DocItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parent.node.name ?? route.cnnctnTarget} );
+		route.siblings = [];
+		for( const sibling of parent.children ){
+			const siblingStore = sibling.nodeId.key == route.nodeId.key ? store : findStore( sibling.nodeId );
+			const siblingRef = siblingStore?.node;
+			if( siblingRef?.isObject && siblingRef?.displayed )
+				route.siblings.push( new DocItem( {path: `${route.cnnctnTarget}/${siblingRef.browse}`, title: siblingRef.name} ) );
 		}
 	}
+	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ): UaNode {
+		let uaNode: UaNode;
+		let nodes = this.getNodes(gateway, cnnctnTarget);
+		let storeNode: StoreNode = nodes.get( OpcObject.rootNode.key );
+		if( !storeNode )
+			return uaNode;
+		browsePath.split("/").forEach( (segment, i)=>{
+			uaNode = storeNode.children.find( (c)=>c.browse == segment );
+			if( uaNode )
+				storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId );
+		} );
+		return uaNode;
+	}
 
-	#opcClientRoutes: DocItem[];
-	#opcClients:Map<OpcServerTarget, Map<NodeId,StoreNode>> = new Map<OpcServerTarget, Map<NodeId,StoreNode>>();
+	#serverCnnctnRoutes: DocItem[];
+	#nodes = new Map<GatewayTarget,Map<CnnctnTarget, Map<NodeKey,StoreNode>>>();
 }

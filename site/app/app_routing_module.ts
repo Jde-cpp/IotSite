@@ -2,13 +2,13 @@ import { NgModule } from '@angular/core';
 import {Routes, ROUTES, RouterModule} from '@angular/router';
 import { ComponentSidenav } from 'jde-material';
 
-import{ Applications, DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService } from 'jde-framework';
-import{ OpcRouteService, OpcNodeRouteService, OpcServer, NodeResolver, IotService, GatewayDetail, NodeDetail } from 'jde-iot';
+import{ DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService } from 'jde-framework';
 import { AccessService, AuthGuard, Group, GroupDetail, Role, RoleDetail, User, UserDetail } from 'jde-access';
+import{ ConnectionResolver, CnnctnDetailResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, SettingsRouteService } from 'jde-iot';
 
 
 const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
-const iotProvider = { provide: 'IGraphQL', useClass: IotService };
+const gatewayProvider = { provide: 'IGraphQL', useClass: GatewayService };
 const qlListProvider = { provide: 'IRouteService', useClass: QLListRouteService };
 const opcNodeRouteProvider = { provide: 'IRouteService', useClass: OpcNodeRouteService };;
 
@@ -18,18 +18,36 @@ export const routes: Routes = [
 		providers: [  {provide: 'IRouteService', useClass: HomeRouteService} ]},
 	{ path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"} },
 
-	{ path: 'opcServers', title: "OPC Servers", canActivate: [AuthGuard], component: Cards,
-		providers: [{provide: 'IRouteService', useClass: OpcRouteService}], data: {
-		summary: "Available OPC Servers",
-	} },
-	{ path: 'opcServers',
+	{ path: 'gateways', title: "Gateways", canActivate: [AuthGuard], component: Cards,
+		providers: [{provide: 'IRouteService', useClass: GatewayRouteService}],
+		data: {summary: "Available Gateways",}
+	},
+	{ path: 'gateways/:host', title: "Gateways", canActivate: [AuthGuard], component: Cards,
+		providers: [{provide: 'IRouteService', useClass: GatewayCnnctnRouteService}],
+		data: {summary: "Available Connections",}
+	},
+	{
+		path: 'gateways/:host/:connection', title: ":host", component: ComponentSidenav, canActivate: [AuthGuard],
+		children :[
+			{
+				path: '**',
+				component: NodeDetail,
+				providers: [ NodeResolver, opcNodeRouteProvider ],
+				canActivate: [AuthGuard],
+				data: { summary: "Opc Gateway Detail", collectionName: "serverConnections" },
+				resolve: { pageData: NodeResolver },
+				runGuardsAndResolvers: "pathParamsOrQueryParamsChange"
+			}
+		]
+	},
+/*	{ path: 'gateways',
 		component: ComponentSidenav,
 		children :[
 			{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "pathParamsOrQueryParamsChange" }/*,
-			{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },*/
+			{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },* /
 		]
 	},
-
+*/
 	{ path: 'access', title: "Access", component: Cards, providers: [qlListProvider], canActivate: [AuthGuard], data: {
 		summary: "Configure User Access"
 	} },
@@ -72,31 +90,67 @@ export const routes: Routes = [
 				},
 			]
 	},
-	{ path: 'settings', title: "Settings", canActivate: [AuthGuard], component: Cards, providers: [qlListProvider] },
-	{ path: 'settings', component: ComponentSidenav, providers: [qlListProvider],
-		children:
-		[
-//			{ path: 'applications', component: Applications, title: "Applications", canActivate: [AuthGuard], data: { summary: "View Applications" } },
+	{ path: 'settings', title: "Settings", canActivate: [AuthGuard], component: Cards, providers: [{provide: 'IRouteService', useClass: SettingsRouteService}],
+	},
+	{
+		path: 'settings/gateways', title: "Gateways", providers: [{provide: 'IRouteService', useClass: GatewayRouteService}], component: Cards, canActivate: [AuthGuard],
+		data: { summary: "Gateways Connected" },
+	},
+	{
+		path: 'settings/gateways/:host', title: ":host", component: ComponentSidenav, canActivate: [AuthGuard],
+		children :[
 			{
-				path: ':collectionDisplay',
+				path: '',
 				component: QLList,
-				providers:[ QLListResolver, iotProvider],
-				resolve: {data : QLListResolver},
+				providers:[ ConnectionResolver, gatewayProvider],
+				resolve: {data : ConnectionResolver},
 				canActivate: [AuthGuard],
 				data: { collections: [
-					{ path:"opcClients", title: "OPC Clients", data:{summary: "Change OPC Clients on Gateway", collectionName: "clients"} },
+					{ path:"serverConnections", title: "OPC Connections", data:{summary: "Change OPC Connections on Gateway", collectionName: "serverConnections"} },
 				]}
 			},
 			{
-				path: 'opcClients/:target',
+				path: ':target',
 				component: GatewayDetail,
-				providers: [ DetailResolver<OpcServer>, iotProvider ],
+				providers: [ CnnctnDetailResolver, gatewayProvider ],
 				canActivate: [AuthGuard],
-				data: { summary: "Opc Gateway Detail" },
-				resolve: { pageData: DetailResolver<OpcServer> }
+				data: { summary: "Opc Gateway Detail", collectionName: "serverConnections" },
+				resolve: { pageData: CnnctnDetailResolver }
 			}
 		]
-	}
+	},
+
+//	{ path: 'settings', component: ComponentSidenav, providers: [qlListProvider],
+//		children:
+//		[
+//			{ path: 'applications', component: Applications, title: "Applications", canActivate: [AuthGuard], data: { summary: "View Applications" } },
+			// 	{ path: 'gateways', title: "Gateways", canActivate: [AuthGuard], component: Cards,
+			// 	children :[
+			// 		{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "pathParamsOrQueryParamsChange" }/*,
+			// 		{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },*/
+			// 	]
+			// },
+
+			// {
+			// 	path: ':collectionDisplay',
+			// 	component: QLList,
+			// 	providers:[ QLListResolver, gatewayProvider],
+			// 	resolve: {data : QLListResolver},
+			// 	canActivate: [AuthGuard],
+			// 	data: { collections: [
+			// 		{ path:"clients", title: "OPC Clients", data:{summary: "Change OPC Clients on Gateway", collectionName: "clients"} },
+			// 	]}
+			// },
+			// {
+			// 	path: 'gateways/:target',
+			// 	component: GatewayDetail,
+			// 	providers: [ DetailResolver<ServerCnnctn>, gatewayProvider ],
+			// 	canActivate: [AuthGuard],
+			// 	data: { summary: "Opc Gateway Detail" },
+			// 	resolve: { pageData: DetailResolver<ServerCnnctn> }
+			// }
+//		]
+//	}
 ];
 function setRoutes(){
 	return routes;
